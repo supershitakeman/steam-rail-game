@@ -1,0 +1,4157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>蒸気鉄道デュエル — Steam Rail Duel（CPU対戦）</title>
+<style>
+  :root{--bg:#12161c;--panel:#1b222b;--panel2:#232c38;--ink:#e8edf2;--mut:#9aa7b5;--line:#33414f;--acc:#3f8efc;--good:#19d3a2;--warn:#ffd23f;}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;}
+  .wrap{max-width:1440px;margin:0 auto;padding:14px}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:12px}
+  .layout{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .boardwrap{flex:0 0 auto;background:#0e1318;border:1px solid var(--line);border-radius:12px;padding:8px;align-self:flex-start}
+  #board{display:block;border-radius:8px;width:auto;height:calc(100vh - 120px);max-height:780px}
+  .side{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:12px}
+  .side-cols{display:flex;gap:12px;align-items:flex-start}
+  .side-main{flex:1 1 260px;min-width:220px;display:flex;flex-direction:column;gap:12px}
+  .side-sub{flex:2 1 360px;min-width:280px;display:flex;flex-direction:column;gap:12px}
+  #banner{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+  #banner .you{color:var(--good);font-weight:700}
+  .cards{display:flex;gap:10px}
+  .pcard{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .pcard.mine{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+  .phead{display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:6px}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid #0006}
+  .tag{color:var(--mut);font-size:11px}
+  .firsttag{background:var(--warn);color:#222;font-size:10px;font-weight:800;padding:1px 5px;border-radius:6px;margin-left:2px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;font-size:12.5px}
+  .stats .vp{font-weight:800;color:var(--warn)}
+  #controls{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;max-height:420px;overflow-y:auto}
+  #controls p{margin:0 0 8px}
+  #controls .small{color:var(--mut);font-size:11.5px}
+  button{font:inherit;font-size:12.5px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin:3px 4px 3px 0;cursor:pointer;transition:.12s}
+  button:hover{border-color:var(--acc);background:#2a3644}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+  button.ghost{background:transparent;color:var(--mut)}
+  button.off{opacity:.4;pointer-events:none}
+  .hint{color:var(--mut);font-size:11px}
+  .msg{color:var(--warn);font-size:12px;min-height:14px;margin:4px 0}
+  .winbox{font-size:16px;font-weight:800;color:var(--good);margin-bottom:8px}
+  .vpb{font-size:11.5px;color:var(--mut);margin:4px 0;line-height:1.5}
+
+  /* タイルビジュアルボタン */
+  .tile-group{margin:6px 0}
+  .tg-label{font-size:10px;color:var(--mut);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .tile-btns-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+  button.tile-btn-visual{
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    padding:6px 8px;cursor:pointer;transition:.12s;min-width:66px;
+  }
+  button.tile-btn-visual:hover{border-color:var(--acc);background:#2a3644}
+  button.tile-btn-visual svg{display:block}
+  .tile-btn-label{font-size:10px;color:var(--ink);text-align:center;line-height:1.3}
+  .tile-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .rot-btns{margin:6px 0}
+  /* Goods Display */
+  #goodsdisplay{display:flex;gap:10px;flex-wrap:wrap}
+  .disp-side{flex:1;border-radius:10px;padding:8px 6px;min-width:140px}
+  .disp-white{background:#3a3e4a;border:1px solid #8090a8}
+  .disp-black{background:#1a1e28;border:1px solid #e8743b55}
+  .disp-title{font-size:11px;font-weight:700;color:#9aa7b5;text-align:center;margin-bottom:5px;letter-spacing:.5px}
+  .disp-cols{display:flex;gap:3px;justify-content:center}
+  .disp-col{display:flex;flex-direction:column;align-items:center;gap:2px;width:28px}
+  .disp-num{font-size:10px;font-weight:700;color:var(--warn);text-align:center}
+  .disp-cube{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:1px solid #0004}
+  .disp-cube.empty{background:#ffffff0a;border:1px dashed #ffffff18}
+  .disp-newcity-label{font-size:9px;font-weight:800;color:var(--good);text-align:center;margin:3px 0 2px;border-top:1px dashed #19d3a255;padding-top:3px}
+  .disp-newcity-label.placed{color:var(--warn);border-top-color:#ffd23f55}
+  .disp-spacer{height:36px}
+  /* Log */
+  #logwrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+  #logwrap h3{margin:0 0 6px;font-size:12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  #log{font-size:12px;line-height:1.55;max-height:180px;overflow:auto;color:#c6d0db}
+  #log div{padding:1px 0;border-bottom:1px solid #ffffff08}
+  /* Setup */
+  #setup{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+  #setup label{display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:13.5px;cursor:pointer}
+  details{margin-top:10px;font-size:12.5px;color:var(--mut)}
+  details summary{cursor:pointer;color:var(--ink)}
+  details p,details li{line-height:1.6}
+
+  /* 相手の直近の動きを点滅させる演出 */
+  @keyframes fxpulse{0%{opacity:.35}50%{opacity:1}100%{opacity:.35}}
+  .fx-glow{animation:fxpulse 1.1s ease-in-out infinite;}
+  /* プレイヤーカードの収入・アクションを目立たせる */
+  .stats .inc{font-weight:800;color:var(--good)}
+  .stats .incup{color:var(--warn);font-size:11px;font-weight:700}
+  .actbar{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .actchip{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid #0005;color:#fff;display:inline-flex;align-items:center;gap:4px}
+  .actchip .who{font-size:9px;opacity:.85}
+  .fxlegend{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:10.5px;color:var(--mut)}
+  .fxlegend .rt{display:inline-flex;align-items:center;gap:4px}
+  .fxlegend .sw{width:10px;height:10px;border-radius:3px;border:1px solid #0006}
+  /* Income Track */
+  #incometrack{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:none}
+  #incometrack.active{display:block}
+  .itrack-title{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:6px}
+  .itrack-table{width:100%;border-collapse:collapse}
+  .itrack-table td{padding:0;border:none}
+  .itrack-band{display:flex;align-items:stretch;gap:2px;margin-bottom:2px}
+  .itrack-red{width:38px;flex-shrink:0;font-size:10px;font-weight:800;color:#ff6b6b;text-align:right;padding-right:5px;display:flex;align-items:center;justify-content:flex-end}
+  .itrack-cells{display:flex;gap:2px;flex:1}
+  .itrack-cell{flex:1;height:24px;border-radius:4px;background:#1e2830;border:1px solid #2a3644;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--mut);position:relative;transition:.15s}
+  .itrack-cell.has-white{background:#1a3a6e;border-color:#3f8efc}
+  .itrack-cell.has-black{background:#4a2a10;border-color:#e8743b}
+  .itrack-cell.has-both{background:#3a2a4e;border-color:#a060ff}
+  .itrack-marker{position:absolute;bottom:1px;width:6px;height:6px;border-radius:50%;border:1px solid #000a}
+  .itrack-marker.w{background:#3f8efc;left:3px}
+  .itrack-marker.b{background:#e8743b;right:3px}
+  /* Status Track (Share / Engine / Action) */
+  #statustrack{display:none;flex-direction:column;gap:6px}
+  #statustrack.active{display:flex}
+  .strack-block{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+  .strack-title{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:5px}
+  .strack-row{display:flex;gap:2px}
+  .strack-cell{flex:1;min-width:0;border-radius:4px;border:1px solid var(--line);background:var(--panel2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px 1px;gap:1px;position:relative}
+  .strack-cell.owned-w{background:#1a3560;border-color:#3f8efc}
+  .strack-cell.owned-b{background:#3a1a08;border-color:#e8743b}
+  .strack-cell.owned-both{background:#2a1a40;border-color:#a060ff}
+  .strack-num{font-size:11px;font-weight:700;color:var(--mut)}
+  .strack-cell.owned-w .strack-num,.strack-cell.owned-both .strack-num{color:#9bbeff}
+  .strack-cell.owned-b .strack-num,.strack-cell.owned-both .strack-num{color:#ffb07a}
+  .strack-dots{display:flex;gap:2px;justify-content:center;min-height:8px}
+  .strack-dot{width:7px;height:7px;border-radius:50%;border:1px solid #0006;flex-shrink:0}
+  /* Action Track */
+  .atrack-row{display:flex;gap:3px;flex-wrap:wrap}
+  .atrack-cell{flex:1;min-width:0;border-radius:6px;border:1px solid var(--line);background:var(--panel2);padding:4px 3px;text-align:center}
+  .atrack-cell.taken-w{background:#1a3560;border-color:#3f8efc}
+  .atrack-cell.taken-b{background:#3a1a08;border-color:#e8743b}
+  .atrack-name{font-size:11px;font-weight:700;color:var(--mut);line-height:1.2}
+  .atrack-cell.taken-w .atrack-name{color:#9bbeff}
+  .atrack-cell.taken-b .atrack-name{color:#ffb07a}
+  .atrack-who{font-size:10px;color:var(--mut);margin-top:1px}
+  /* Round Track */
+  #roundtrack{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:none}
+  #roundtrack.active{display:block}
+  .rtrack-title{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:6px}
+  .rtrack-cells{display:flex;gap:3px}
+  .rtrack-cell{flex:1;border-radius:5px;border:1px solid var(--line);padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--panel2);transition:.15s}
+  .rtrack-cell.current{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn) inset}
+  .rtrack-cell.done{opacity:.4}
+  .rtrack-turn{font-size:11px;font-weight:800;color:var(--mut)}
+  .rtrack-cell.current .rtrack-turn{color:var(--warn)}
+  .rtrack-first{width:13px;height:13px;border-radius:50%;border:1.5px solid #0006}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>蒸気鉄道デュエル <span style="color:var(--mut);font-weight:400;font-size:13px">Steam Rail Duel — CPU対戦</span></h1>
+  <div class="sub">2人用マップを CPU と対戦できる非公式アプリ。全8ターン・固定手番。</div>
+  <div id="setup">
+    <h3 style="margin:0 0 8px;font-size:14px">対戦設定</h3>
+    <div style="margin-bottom:8px">
+      <label><input type="radio" name="side" value="white" checked> 白（先手：1,3,6,8ターン目）</label>
+      <label><input type="radio" name="side" value="black"> 黒（先手：2,4,5,7ターン目）</label>
+      <label><input type="radio" name="side" value="random"> ランダム</label>
+    </div>
+    <button class="primary" onclick="startNew()">ゲーム開始</button>
+    <details>
+      <summary>タイル敷設の操作方法</summary>
+      <ol style="margin-top:8px">
+        <li>敷設したい<b>平地・山・町</b>のマスをクリック</li>
+        <li>タイルの<b>種類</b>を選択（在庫あるもののみ表示）</li>
+        <li>「↺/↻」ボタンで<b>向きを調整</b>（プレビューが黄色で表示）</li>
+        <li>「✓ 確定」で配置</li>
+        <li>全て配置したら「敷設完了」（都市接続チェックあり）</li>
+      </ol>
+      <p><b>タイルコスト（平地/山）：</b>Simple $2/$4　Coexist $3/$5　Crossing $4/$6<br>
+      置換：Coexist $2　Crossing $3　町置換 $3<br>
+      町新規：$1＋出口数×$1</p>
+    </details>
+  </div>
+  <div class="layout">
+    <div class="boardwrap">
+      <svg id="board" viewBox="0 0 419 700" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="side">
+      <div id="banner">—</div>
+      <div class="side-cols">
+        <div class="side-main">
+          <div class="cards">
+            <div id="card-white" class="pcard"></div>
+            <div id="card-black" class="pcard"></div>
+          </div>
+          <div id="controls"></div>
+          <div id="logwrap"><h3>ログ</h3><div id="log"></div></div>
+        </div>
+        <div class="side-sub">
+          <div id="roundtrack"></div>
+          <div id="statustrack"></div>
+          <div id="incometrack"></div>
+          <div id="goodsdisplay"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>"use strict";
+
+function actionNameJa(a) {
+  const m = {
+    "First Move":"優先輸送","First Build":"優先敷設","Engineer":"エンジニア",
+    "Locomotive":"機関車","Production":"商品生産","Urbanization":"都市化"
+  };
+  return m[a] || a;
+}
+function colorNameJa(c) {
+  const m = {red:"赤",blue:"青",purple:"紫",yellow:"黄",black:"黒"};
+  return m[c] || c;
+}
+
+/* ---------- geometry ---------- */
+const SIZE = 33;
+const ORIGIN_X = SIZE + 6;
+const SQ3 = Math.sqrt(3);
+const ORIGIN_Y = SIZE + 6 + SQ3 * SIZE / 2;
+function hexCenter(c, r) {
+  return {
+    x: ORIGIN_X + 1.5 * SIZE * c,
+    y: ORIGIN_Y + SQ3 * SIZE * r + (c % 2 === 0 ? 0 : SQ3 * SIZE / 2)
+  };
+}
+function hexCorners(c, r) {
+  const { x, y } = hexCenter(c, r);
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i);
+    pts.push((x + SIZE * Math.cos(a)).toFixed(1) + "," + (y + SIZE * Math.sin(a)).toFixed(1));
+  }
+  return pts.join(" ");
+}
+function neighborsOf(c, r) {
+  const d = (c % 2 === 0)
+    ? [[0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]]
+    : [[0,-1],[0,1],[-1,0],[-1,1],[1,0],[1,1]];
+  return d.map(([dc,dr]) => [c+dc, r+dr]);
+}
+
+/* ---------- board ---------- */
+function key(c, r) { return c + "," + r; }
+const HEX = {};
+const LOCS = {};
+const RAW_HEXES = [
+  {
+    "c": 0,
+    "r": 10,
+    "t": "city",
+    "color": "red",
+    "nums": [
+      5,
+      6
+    ],
+    "name": "NewYork",
+    "numColors": [
+      "dark",
+      "dark"
+    ]
+  },
+  {
+    "c": 0,
+    "r": 9,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 7,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 6,
+    "t": "city",
+    "color": "red",
+    "nums": [
+      3,
+      4
+    ],
+    "name": "Albany",
+    "numColors": [
+      "dark",
+      "dark"
+    ]
+  },
+  {
+    "c": 0,
+    "r": 5,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 4,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 3,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 2,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_1_9"
+  },
+  {
+    "c": 0,
+    "r": 1,
+    "t": "land"
+  },
+  {
+    "c": 0,
+    "r": 0,
+    "t": "land"
+  },
+  {
+    "c": 1,
+    "r": 9,
+    "t": "land"
+  },
+  {
+    "c": 1,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 1,
+    "r": 7,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 1,
+    "r": 6,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 1,
+    "r": 5,
+    "t": "land"
+  },
+  {
+    "c": 1,
+    "r": 4,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_2_6"
+  },
+  {
+    "c": 1,
+    "r": 3,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 1,
+    "r": 2,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 1,
+    "r": 1,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 1,
+    "r": 0,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 1,
+    "r": -1,
+    "t": "city",
+    "color": "purple",
+    "nums": [
+      1
+    ],
+    "name": "Burlington",
+    "numColors": [
+      "dark"
+    ]
+  },
+  {
+    "c": 2,
+    "r": 10,
+    "t": "water"
+  },
+  {
+    "c": 2,
+    "r": 9,
+    "t": "city",
+    "color": "red",
+    "nums": [
+      2
+    ],
+    "name": "NewHaven",
+    "numColors": [
+      "dark"
+    ]
+  },
+  {
+    "c": 2,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 2,
+    "r": 7,
+    "t": "land"
+  },
+  {
+    "c": 2,
+    "r": 6,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 2,
+    "r": 5,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 2,
+    "r": 4,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 2,
+    "r": 3,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_3_8"
+  },
+  {
+    "c": 2,
+    "r": 2,
+    "t": "land"
+  },
+  {
+    "c": 2,
+    "r": 1,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_3_10"
+  },
+  {
+    "c": 2,
+    "r": 0,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 3,
+    "r": 9,
+    "t": "water"
+  },
+  {
+    "c": 3,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 3,
+    "r": 7,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_4_3"
+  },
+  {
+    "c": 3,
+    "r": 6,
+    "t": "land"
+  },
+  {
+    "c": 3,
+    "r": 5,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_4_5"
+  },
+  {
+    "c": 3,
+    "r": 4,
+    "t": "land"
+  },
+  {
+    "c": 3,
+    "r": 3,
+    "t": "land"
+  },
+  {
+    "c": 3,
+    "r": 2,
+    "t": "land"
+  },
+  {
+    "c": 3,
+    "r": 1,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 3,
+    "r": 0,
+    "t": "land"
+  },
+  {
+    "c": 3,
+    "r": -1,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 10,
+    "t": "water"
+  },
+  {
+    "c": 4,
+    "r": 9,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 7,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 6,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 5,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 4,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 3,
+    "t": "city",
+    "color": "blue",
+    "nums": [
+      3
+    ],
+    "name": "Concord",
+    "numColors": [
+      "white"
+    ]
+  },
+  {
+    "c": 4,
+    "r": 2,
+    "t": "land"
+  },
+  {
+    "c": 4,
+    "r": 1,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 4,
+    "r": 0,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 5,
+    "r": 9,
+    "t": "water"
+  },
+  {
+    "c": 5,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 5,
+    "r": 7,
+    "t": "city",
+    "color": "blue",
+    "nums": [
+      4
+    ],
+    "name": "Providence",
+    "numColors": [
+      "white"
+    ]
+  },
+  {
+    "c": 5,
+    "r": 6,
+    "t": "land"
+  },
+  {
+    "c": 5,
+    "r": 5,
+    "t": "land"
+  },
+  {
+    "c": 5,
+    "r": 4,
+    "t": "city",
+    "color": "blue",
+    "nums": [
+      2
+    ],
+    "name": "Manchester",
+    "numColors": [
+      "white"
+    ]
+  },
+  {
+    "c": 5,
+    "r": 3,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 5,
+    "r": 2,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 5,
+    "r": 1,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 5,
+    "r": 0,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_6_10"
+  },
+  {
+    "c": 5,
+    "r": -1,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 6,
+    "r": 10,
+    "t": "water"
+  },
+  {
+    "c": 6,
+    "r": 9,
+    "t": "water"
+  },
+  {
+    "c": 6,
+    "r": 8,
+    "t": "land"
+  },
+  {
+    "c": 6,
+    "r": 7,
+    "t": "land"
+  },
+  {
+    "c": 6,
+    "r": 6,
+    "t": "city",
+    "color": "red",
+    "nums": [
+      5,
+      6
+    ],
+    "name": "Boston",
+    "numColors": [
+      "white",
+      "white"
+    ]
+  },
+  {
+    "c": 6,
+    "r": 5,
+    "t": "land"
+  },
+  {
+    "c": 6,
+    "r": 4,
+    "t": "land"
+  },
+  {
+    "c": 6,
+    "r": 3,
+    "t": "land"
+  },
+  {
+    "c": 6,
+    "r": 2,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 6,
+    "r": 1,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 6,
+    "r": 0,
+    "t": "land",
+    "terrain": "mountain"
+  },
+  {
+    "c": 7,
+    "r": 9,
+    "t": "water"
+  },
+  {
+    "c": 7,
+    "r": 8,
+    "t": "water"
+  },
+  {
+    "c": 7,
+    "r": 7,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_8_3"
+  },
+  {
+    "c": 7,
+    "r": 6,
+    "t": "water"
+  },
+  {
+    "c": 7,
+    "r": 5,
+    "t": "water"
+  },
+  {
+    "c": 7,
+    "r": 4,
+    "t": "water"
+  },
+  {
+    "c": 7,
+    "r": 3,
+    "t": "land"
+  },
+  {
+    "c": 7,
+    "r": 2,
+    "t": "city",
+    "color": "yellow",
+    "nums": [
+      1
+    ],
+    "name": "Portland",
+    "numColors": [
+      "white"
+    ]
+  },
+  {
+    "c": 7,
+    "r": 1,
+    "t": "land"
+  },
+  {
+    "c": 7,
+    "r": 0,
+    "t": "town",
+    "color": null,
+    "nums": [],
+    "name": "Town_8_10"
+  },
+  {
+    "c": 7,
+    "r": -1,
+    "t": "land"
+  }
+];
+RAW_HEXES.forEach(h => {
+  h.key = key(h.c, h.r);
+  h.tile = null;   // 配置済みタイル情報
+  h.goods = [];
+  HEX[h.key] = h;
+  if (h.name) LOCS[h.name] = h;
+});
+// 盤の初期状態のスナップショット（newGameでの完全リセット用）。
+// RAW_HEXES の各要素は HEX[key] と同一オブジェクトなので、都市化等で書き換わってしまう。
+// そこで初期の t/color/nums/numColors を別途保存しておき、ここから復元する。
+const HEX_PRISTINE = {};
+Object.values(HEX).forEach(h => {
+  HEX_PRISTINE[h.key] = { t: h.t, color: h.color, nums: (h.nums||[]).slice(), numColors: (h.numColors||[]).slice() };
+});
+function isLoc(h) { return h && (h.t === "city" || h.t === "town"); }
+function nbHexes(h) { return neighborsOf(h.c, h.r).map(([c,r]) => HEX[key(c,r)]).filter(Boolean); }
+
+/* ---------- タイル定義 ---------- */
+const TILE_DEFS = {
+  straight:  { label:"直線",     pairs:[[0,3]],         stock:48, maxStock:48, isSimple:true,   cost:{plain:2,mountain:4} },
+  gentle:    { label:"緩カーブ", pairs:[[0,2]],         stock:55, maxStock:55, isSimple:true,   cost:{plain:2,mountain:4} },
+  acute:     { label:"急カーブ", pairs:[[0,1]],         stock:7,  maxStock:7,  isSimple:true,   cost:{plain:2,mountain:4} },
+  crossingA: { label:"交差A",    pairs:[[0,3],[1,4]],   stock:4,  maxStock:4,  isCrossing:true, cost:{plain:4,mountain:6}, replaceCost:3 },
+  crossingB: { label:"交差B",    pairs:[[0,2],[1,4]],   stock:4,  maxStock:4,  isCrossing:true, cost:{plain:4,mountain:6}, replaceCost:3 },
+  crossingC: { label:"交差C",    pairs:[[0,2],[1,3]],   stock:3,  maxStock:3,  isCrossing:true, cost:{plain:4,mountain:6}, replaceCost:3 },
+  coexistA:  { label:"共存A",    pairs:[[0,3],[1,2]],   stock:1,  maxStock:1,  isCoexist:true,  cost:{plain:3,mountain:5}, replaceCost:2 },
+  coexistB:  { label:"共存B",    pairs:[[0,2],[3,5]],   stock:1,  maxStock:1,  isCoexist:true,  cost:{plain:3,mountain:5}, replaceCost:2 },
+  coexistC:  { label:"共存C",    pairs:[[0,1],[3,5]],   stock:1,  maxStock:1,  isCoexist:true,  cost:{plain:3,mountain:5}, replaceCost:2 },
+  coexistD:  { label:"共存D",    pairs:[[1,2],[3,5]],   stock:1,  maxStock:1,  isCoexist:true,  cost:{plain:3,mountain:5}, replaceCost:2 },
+  town1:     { label:"町1出口",  exits:[0],             stock:3,  maxStock:3,  isTown:true },
+  town012:   { label:"町3出口(012)", exits:[0,1,2],     stock:2,  maxStock:2,  isTown:true },
+  town013:   { label:"町3出口(013)", exits:[0,1,3],     stock:2,  maxStock:2,  isTown:true },
+  town023:   { label:"町3出口(023)", exits:[0,2,3],     stock:2,  maxStock:2,  isTown:true },
+  town024:   { label:"町3出口(024)", exits:[0,2,4],     stock:2,  maxStock:2,  isTown:true },
+  town0123:  { label:"町4出口(0123)", exits:[0,1,2,3],  stock:1,  maxStock:1,  isTown:true },
+  town0124:  { label:"町4出口(0124)", exits:[0,1,2,4],  stock:1,  maxStock:1,  isTown:true },
+  town0134:  { label:"町4出口(0134)", exits:[0,1,3,4],  stock:1,  maxStock:1,  isTown:true },
+};
+let TOWN_DISK_STOCK = 8;
+const TOWN_DISK_MAX = 8;
+
+function resetTilePool() {
+  Object.values(TILE_DEFS).forEach(d => { if (d.maxStock !== undefined) d.stock = d.maxStock; });
+  TOWN_DISK_STOCK = TOWN_DISK_MAX;
+}
+
+/* ---------- 回転計算 ---------- */
+function rotatePair(pair, rot) { return pair.map(e => (e + rot) % 6).sort((a,b)=>a-b); }
+function rotatePairs(pairs, rot) { return pairs.map(p => rotatePair(p, rot)); }
+function rotateExits(exits, rot) { return exits.map(e => (e + rot) % 6).sort((a,b)=>a-b); }
+function normKey(pairs) {
+  return JSON.stringify(pairs.map(p=>[...p].sort((a,b)=>a-b)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]));
+}
+function validRotations(typeId) {
+  const d = TILE_DEFS[typeId]; if (!d) return [];
+  const seen = new Set(), result = [];
+  for (let rot = 0; rot < 6; rot++) {
+    const k = d.isTown
+      ? JSON.stringify(rotateExits(d.exits, rot))
+      : normKey(rotatePairs(d.pairs, rot));
+    if (!seen.has(k)) { seen.add(k); result.push(rot); }
+  }
+  return result;
+}
+function getExits(typeId, rot) {
+  const d = TILE_DEFS[typeId]; if (!d) return [];
+  if (d.isTown) return rotateExits(d.exits, rot);
+  return [...new Set(rotatePairs(d.pairs, rot).flat())].sort((a,b)=>a-b);
+}
+function getPairs(typeId, rot) {
+  const d = TILE_DEFS[typeId]; if (!d || !d.pairs) return [];
+  return rotatePairs(d.pairs, rot);
+}
+function oppositeEdge(e) { return (e + 3) % 6; }
+
+/* fromEdge から入った線が、同じ1本の線として繋がっている出口辺だけを返す。
+   交差・共存タイル（独立した2本の線）で、別の線へ“乗り換える”誤接続を防ぐ。
+   simpleタイル(1ペア)なら従来通り反対側の辺を返す。 */
+function pairedExits(typeId, rot, fromEdge) {
+  const out = [];
+  for (const [a, b] of getPairs(typeId, rot)) {
+    if (a === fromEdge) out.push(b);
+    else if (b === fromEdge) out.push(a);
+  }
+  return out;
+}
+
+/* flat-top even-q offset: 辺方向の隣hexオフセット
+   辺0=30°(SE-right), 辺1=90°(S), 辺2=150°(SW), 辺3=210°(NW), 辺4=270°(N), 辺5=330°(NE-right)
+   ※ EDGE_ANGLES=[30,90,150,210,270,330] と対応 */
+const EDGE_NB_EVEN = [[1,0],[0,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+const EDGE_NB_ODD  = [[1,1],[0,1],[-1,1],[-1,0],[0,-1],[1,0]];
+function edgeNeighborCoords(c, r, e) {
+  const dirs = (c % 2 === 0) ? EDGE_NB_EVEN : EDGE_NB_ODD;
+  const [dc, dr] = dirs[e];
+  return [c+dc, r+dr];
+}
+function edgeNeighborHex(hex, e) {
+  const [nc,nr] = edgeNeighborCoords(hex.c, hex.r, e);
+  return HEX[key(nc,nr)] || null;
+}
+
+/* hexの辺eに接続があるか */
+function hexExitAt(hex, e) {
+  if (!hex || !hex.tile) return false;
+  return getExits(hex.tile.typeId, hex.tile.rotation).includes(e);
+}
+
+/* ---------- コスト計算 ---------- */
+function calcTileCost(typeId, rot, hex, prevTile) {
+  const d = TILE_DEFS[typeId]; if (!d) return 0;
+  const terrain = hex.terrain === "mountain" ? "mountain" : "plain";
+
+  // 町タイル（専用）: 置き換えは$3固定、新規は$1 + 出口数×$1
+  if (d.isTown) {
+    if (prevTile) return 3;
+    const exits = rotateExits(d.exits, rot).length;
+    return 1 + exits;
+  }
+
+  // 町hex（Simple/Complex + 町ディスク）
+  if (hex.t === "town") {
+    if (prevTile) return 3; // 置き換え
+    // 新規: 町$1 + 線路本数×$1（2本→$3）
+    const exits = getExits(typeId, rot).length;
+    return 1 + exits;
+  }
+
+  // 平地/山：置き換えか新規か
+  if (prevTile) {
+    const pd = TILE_DEFS[prevTile.typeId];
+    if (pd && pd.isTown) return 3;
+    if (d.isCrossing) return d.replaceCost || 3;
+    if (d.isCoexist)  return d.replaceCost || 2;
+    return 2;
+  }
+  return d.cost ? (d.cost[terrain] || 2) : 2;
+}
+
+/* ---------- タイルカウント（1ターン消費枚数） ---------- */
+function calcTileCount(typeId, hex, prevTile) {
+  // 置き換えは消費1枚（置き換え先のタイルを使う）
+  // 新規は1枚
+  // 町タイル新規で町ディスクも使う場合は1枚（タイル）+ディスク
+  return 1;
+}
+
+/* ---------- タイル配置（エンジン側） ---------- */
+// 今ターンの配置記録（undo用）
+let G_PLACEMENTS = []; // [{hexKey, prevTile, newTile, cost, tileCount, usedDisk}]
+let G_URBANIZATIONS = []; // [{side, townName}]
+
+function placeTile(side, hexKey, typeId, rot) {
+  const hex = HEX[hexKey];
+  const d = TILE_DEFS[typeId];
+  if (!hex || !d) return { ok:false, msg:"無効なhexまたはタイルです。" };
+  if (hex.t === "water") return { ok:false, msg:"海には敷設できません。" };
+  if (hex.t === "city")  return { ok:false, msg:"都市hexには敷設できません。" };
+
+  const p = G.players[side];
+  const prevTile = hex.tile ? { ...hex.tile } : null;
+
+  /* タイル枚数チェック */
+  const tileCount = 1;
+  if (p.tilesThisTurn + tileCount > buildBudget(p))
+    return { ok:false, msg:"このターンの敷設枚数（" + buildBudget(p) + "枚）を超えます。" };
+
+  /* 在庫チェック */
+  if (d.stock !== undefined && d.stock <= 0)
+    return { ok:false, msg:d.label + "の在庫がありません。" };
+
+  /* 町ディスクが必要な場合 */
+  // 町hexに線路タイル（非専用）を置く場合は常にディスクが要る。
+  // 既存タイルがディスク付き（Simple/Complex+ディスク）なら、そのディスクを引き継ぐ（新規消費なし）。
+  let needDisk = (hex.t === "town" && !d.isTown);
+  const consumesNewDisk = needDisk && !(prevTile && prevTile.hasDisk);
+  if (consumesNewDisk && TOWN_DISK_STOCK <= 0) {
+    return { ok:false, msg:"町ディスクの在庫がありません。" };
+  }
+  if (d.isTown) {
+    // Dedicated Town タイル
+    if (!prevTile) {
+      // 1出口タイルは町ディスク不要、2本以上（exits>=2）は町ディスク必要
+      const exits = rotateExits(d.exits, rot).length;
+      // Dedicated Townタイルは町ディスク不要（タイル自体が町を表す）
+      needDisk = false;
+    }
+  }
+
+  /* 既存タイルとの整合性チェック */
+  if (prevTile) {
+    const pd = TILE_DEFS[prevTile.typeId];
+    // 相手の線路を奪う置き換えは不可。複線（交差/共存）で重ねる場合のみ、相手の線を残して可。
+    const prevOwners = prevTile.pairOwners ? prevTile.pairOwners.filter(Boolean) : [prevTile.owner];
+    if (prevOwners.some(o => o && o !== side) && !(d.isCrossing || d.isCoexist))
+      return { ok:false, msg:"相手の線路は奪えません（複線交差/共存でのみ重ねられます）。" };
+    // Simple→Simpleへの置き換えは不可（別のタイル種別が必要）
+    if (pd && pd.isSimple && d.isSimple)
+      return { ok:false, msg:"Simple同士の置き換えはできません。" };
+    // Simple→Complexへの置き換え：既存の接続を維持しているか
+    if (pd && pd.isSimple && (d.isCrossing || d.isCoexist)) {
+      const oldExits = getExits(prevTile.typeId, prevTile.rotation);
+      const newPairs = getPairs(typeId, rot).flat();
+      for (const e of oldExits) {
+        if (!newPairs.includes(e))
+          return { ok:false, msg:"既存の線路（辺" + e + "）を維持できません。" };
+      }
+    }
+    // Complexタイルへのさらなる変更は不可
+    if (pd && (pd.isCrossing || pd.isCoexist))
+      return { ok:false, msg:"複合タイルの置き換えはできません。" };
+    // 町タイルの置き換えチェック：既存出口を維持
+    if (pd && pd.isTown) {
+      const oldExits = getExits(prevTile.typeId, prevTile.rotation);
+      const newExits = getExits(typeId, rot);
+      for (const e of oldExits) {
+        if (!newExits.includes(e))
+          return { ok:false, msg:"既存の町の線路（辺" + e + "）を維持できません。" };
+      }
+    }
+  }
+
+  /* 盤外・海チェック：出口が盤外またはwaterに向いていたらNG
+     ただし都市・町に向いている場合はOK（それが接続先になる） */
+  const exits = getExits(typeId, rot);
+  for (const e of exits) {
+    const nb = edgeNeighborHex(hex, e);
+    if (!nb) return { ok:false, msg:"辺" + e + "が盤外に向いています。" };
+    if (nb.t === "water") return { ok:false, msg:"辺" + e + "が海に向いています。" };
+    // 都市・町は接続先として有効（チェック不要）
+  }
+
+  /* コスト計算 */
+  const cost = calcTileCost(typeId, rot, hex, prevTile);
+  if (cost > p.cash) return { ok:false, msg:"$" + cost + " 必要ですが $" + p.cash + " しかありません。" };
+
+  /* 消費・配置 */
+  if (prevTile) {
+    // 元のタイルをストックに返す
+    const pd = TILE_DEFS[prevTile.typeId];
+    if (pd && pd.stock !== undefined) pd.stock++;
+    if (prevTile.hasDisk) TOWN_DISK_STOCK++;
+  }
+  if (d.stock !== undefined) d.stock--;
+  if (needDisk) TOWN_DISK_STOCK--;
+  p.cash -= cost;
+  p.tilesThisTurn += tileCount;
+
+  // Complex Crossing/Coexistに置き換えた場合：
+  // 元のSimpleタイルの接続は元のオーナーのまま、新しい接続は自分のものになる
+  let pairOwners = null;
+  if (prevTile && (d.isCrossing || d.isCoexist) && d.pairs) {
+    const newPairs = getPairs(typeId, rot);
+    const oldExits = getExits(prevTile.typeId, prevTile.rotation);
+    pairOwners = newPairs.map(pair => {
+      // この接続ペアが元の線路と一致するか
+      const isOld = pair.every(e => oldExits.includes(e));
+      return isOld ? prevTile.owner : side;
+    });
+  }
+
+  const newTile = { typeId, rotation: rot, owner: side, hasDisk: needDisk, pairOwners };
+  hex.tile = newTile;
+
+  G_PLACEMENTS.push({ hexKey, prevTile, newTile: {...newTile}, cost, tileCount, usedDisk: needDisk });
+  log(p.tname + " が " + hex.key + " に " + d.label + "（回転" + rot + "）を敷設 $" + cost);
+  if (typeof ui_render === "function") ui_render();
+  return { ok:true };
+}
+
+function undoLastPlacement(side) {
+  if (!G_PLACEMENTS.length) return { ok:false, msg:"取り消せる操作がありません。" };
+  const last = G_PLACEMENTS[G_PLACEMENTS.length - 1];
+  const hex = HEX[last.hexKey];
+  const p = G.players[side];
+  const d = TILE_DEFS[last.newTile.typeId];
+
+  // 元に戻す
+  if (d && d.stock !== undefined) d.stock++;
+  if (last.usedDisk) TOWN_DISK_STOCK++;
+  p.cash += last.cost;
+  p.tilesThisTurn -= last.tileCount;
+
+  // 以前のタイルを再配置（あれば）
+  if (last.prevTile) {
+    const pd = TILE_DEFS[last.prevTile.typeId];
+    if (pd && pd.stock !== undefined) pd.stock--;
+    if (last.prevTile.hasDisk) TOWN_DISK_STOCK--;
+    hex.tile = last.prevTile;
+  } else {
+    hex.tile = null;
+  }
+
+  G_PLACEMENTS.pop();
+  log(p.tname + " が直前の敷設を取り消しました。");
+  if (typeof ui_render === "function") ui_render();
+  return { ok:true };
+}
+
+/* ---------- 敷設終了チェック ---------- */
+function checkBuildValid(side) {
+  const errors = [];
+
+  // 今ターンに配置した全hexを収集
+  const placedKeys = new Set();
+  G_PLACEMENTS.forEach(pl => {
+    const hex = HEX[pl.hexKey];
+    if (hex && hex.tile && hex.tile.owner === side) placedKeys.add(pl.hexKey);
+  });
+  if (placedKeys.size === 0) return errors;
+
+  // チェック①：今ターン配置したタイルが都市に接続されているか
+  for (const hexKey of placedKeys) {
+    const hex = HEX[hexKey];
+    if (!hex || !hex.tile) continue;
+    if (!isConnectedToCity(hex, side, new Set())) {
+      errors.push(hex.key + " が都市（または町経由の都市）に接続されていません。");
+    }
+  }
+
+  // チェック②：今ターン配置したタイルを含む自分の全タイルに未完成端部がないか
+  // 「未完成」= タイルの出口辺の先が 都市・町・別タイル のどれでもない
+  // ※ただし町hexにタイルが置かれていない場合（タイルなし町）は除外しない
+  const allMyHexes = Object.values(HEX).filter(h => h.tile && h.tile.owner === side);
+  for (const hex of allMyHexes) {
+    const exits = getExits(hex.tile.typeId, hex.tile.rotation);
+    for (const e of exits) {
+      const nb = edgeNeighborHex(hex, e);
+      if (!nb) {
+        errors.push(hex.key + " の辺" + e + "が盤外に向いています（未完成端部）。");
+        continue;
+      }
+      // 都市に接続 → OK
+      if (nb.t === "city") continue;
+      // 町に接続：町タイルが置かれ、向かい辺で線路がつながっている場合のみ完成。
+      // タイルの無い「素の町」に向いた線路は配送経路にならないため未完成扱い。
+      if (nb.t === "town") {
+        if (nb.tile && hexExitAt(nb, oppositeEdge(e))) continue;
+        errors.push(hex.key + " の辺" + e + "がタイル未設置の町（" + (nb.name || "町") + "）に向いており未完成です（町には町タイルを置いて接続してください）。");
+        continue;
+      }
+      // 別のタイルが向かい辺で接続している → OK
+      if (nb.tile && hexExitAt(nb, oppositeEdge(e))) continue;
+      // 上記以外 = 平地hexでタイルなし、または向かい辺が接続していない → 未完成端部
+      errors.push(hex.key + " の辺" + e + "方向に線路の端部があります（未完成：都市・町・他の線路に接続されていません）。");
+    }
+  }
+
+  return errors;
+}
+
+function isConnectedToCity(hex, side, visited, fromEdge) {
+  if (!hex || visited.has(hex.key)) return false;
+  visited.add(hex.key);
+  if (!hex.tile) return false;
+
+  // 最初の呼び出し(fromEdge未指定)は全出口から探索。途中通過は：
+  //  ・町＝節点なので全スポークが繋がる
+  //  ・平地タイル＝入った辺(fromEdge)とペアになっている線だけ辿る（交差/共存の誤接続を防ぐ）
+  const useAll = (fromEdge === undefined) || hex.t === "town";
+  const exits = useAll ? getExits(hex.tile.typeId, hex.tile.rotation)
+                       : pairedExits(hex.tile.typeId, hex.tile.rotation, fromEdge);
+  for (const e of exits) {
+    const nb = edgeNeighborHex(hex, e);
+    if (!nb) continue;
+
+    // 都市に向いている辺があれば接続OK（新都市含む）
+    if (nb.t === "city") return true;
+
+    // 町タイルが置かれている場合：向かい辺から接続が来て、町から先に都市があるか
+    if (nb.t === "town" && nb.tile) {
+      const opp = oppositeEdge(e);
+      if (hexExitAt(nb, opp)) {
+        if (isConnectedToCity(nb, side, visited, opp)) return true;
+      }
+      continue;
+    }
+
+    // 平地タイルが置かれている場合：向かい辺から接続が来て先を辿る
+    if (nb.tile) {
+      const opp = oppositeEdge(e);
+      if (hexExitAt(nb, opp)) {
+        if (isConnectedToCity(nb, side, visited, opp)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/* ---------- buildBudget ---------- */
+function buildBudget(p) { return G.actions["Engineer"] === p.side ? 4 : 3; }
+
+/* hexKey の線路のうち、locName 側へ向かう線（ペア）の所有者を返す。
+   複線（pairOwners）なら、その辺を含むペアの所有者を正しく返す。 */
+function linkOwnerAt(hexKey, locName) {
+  const h = HEX[hexKey];
+  if (!h || !h.tile) return null;
+  const d = TILE_DEFS[h.tile.typeId];
+  if (!(h.tile.pairOwners && d && d.pairs)) return h.tile.owner;
+  let edgeToLoc = -1;
+  for (let e = 0; e < 6; e++) {
+    const nb = edgeNeighborHex(h, e);
+    if (nb && nb.name === locName) { edgeToLoc = e; break; }
+  }
+  const pairs = getPairs(h.tile.typeId, h.tile.rotation);
+  for (let i = 0; i < pairs.length; i++) {
+    if (pairs[i].includes(edgeToLoc)) return h.tile.pairOwners[i] || h.tile.owner;
+  }
+  return h.tile.owner;
+}
+
+/* ---------- 完成リンクの検出（輸送用） ---------- */
+// タイルベースで都市/町間の接続グラフを構築
+function buildConnectionGraph() {
+  const connections = [];
+
+  function dfs(startLoc, curHex, fromEdge, pathHexes) {
+    // 入った辺(fromEdge)と同じ線で繋がっている出口だけを辿る（交差/共存の誤接続を防ぐ）
+    for (const e of pairedExits(curHex.tile.typeId, curHex.tile.rotation, fromEdge)) {
+      const nb = edgeNeighborHex(curHex, e);
+      if (!nb || nb.t === "water") continue;
+
+      if (nb.t === "city" || nb.t === "town") {
+        if (nb.name !== startLoc.name) {
+          // リンク所有者 = startLoc側の最初のhexの、startLocへ向かう線の所有者
+          const owner = pathHexes.length ? linkOwnerAt(pathHexes[0], startLoc.name) : null;
+          connections.push({ from: startLoc.name, to: nb.name, hexPath: [...pathHexes], owner });
+        }
+        continue;
+      }
+      if (nb.tile && hexExitAt(nb, oppositeEdge(e)) && !pathHexes.includes(nb.key)) {
+        dfs(startLoc, nb, oppositeEdge(e), [...pathHexes, nb.key]);
+      }
+    }
+  }
+
+  Object.values(LOCS).filter(l => l.t === "city" || (l.t === "town" && l.tile)).forEach(loc => {
+    const exits = loc.t === "town" ? getExits(loc.tile.typeId, loc.tile.rotation) : [0,1,2,3,4,5];
+    for (const e of exits) {
+      const nb = edgeNeighborHex(loc, e);
+      if (!nb || nb.t === "water") continue;
+      if ((nb.t === "city" || nb.t === "town") && nb.name !== loc.name) {
+        connections.push({ from: loc.name, to: nb.name, hexPath: [], owner: null });
+        continue;
+      }
+      if (nb.tile && hexExitAt(nb, oppositeEdge(e))) {
+        dfs(loc, nb, oppositeEdge(e), [nb.key]);
+      }
+    }
+  });
+
+  return connections;
+}
+
+/* ---------- 輸送（タイルベース） ---------- */
+function allCities() {
+  return Object.values(LOCS).filter(l => l.t === "city");
+}
+
+function deliveriesFrom(side, engine) {
+  const res = [];
+  const conns = buildConnectionGraph();
+
+  // 接続グラフをBFSして配達候補を列挙
+  allCities().forEach(src => {
+    (src.goods || []).forEach((color, gi) => {
+      // BFS
+      const queue = [{ at: src.name, links: [], visited: new Set([src.name]) }];
+      const found = {};
+      while (queue.length) {
+        const st = queue.shift();
+        if (st.links.length >= engine) continue;
+        conns.filter(c => c.from === st.at && !st.visited.has(c.to)).forEach(conn => {
+          const nv = new Set(st.visited); nv.add(conn.to);
+          const nl = st.links.concat([conn]);
+          const loc = LOCS[conn.to];
+          if (loc && loc.t === "city" && loc.color === color) {
+            const k = conn.to + ":" + nl.length;
+            // 各リンクの所有者は接続グラフに記録済み（複線も正しく判定）
+            const ownInc = nl.filter(l => l.owner === side).length;
+            const cand = { srcName: src.name, gi, color, links: nl, dest: conn.to, ownInc, totalLen: nl.length };
+            if (!found[k] || found[k].ownInc < ownInc) found[k] = cand;
+          } else if (loc && (loc.t === "city" || (loc.t === "town" && loc.tile))) {
+            queue.push({ at: conn.to, links: nl, visited: nv });
+          }
+        });
+      }
+      Object.values(found).forEach(c => res.push(c));
+    });
+  });
+  return res;
+}
+
+function executeDelivery(side, cand) {
+  const src = LOCS[cand.srcName];
+  src.goods.splice(cand.gi, 1);
+  // 収入増加: 各リンクの所有者に+1（複線も正しい所有者へ。相手の線路を使えば相手に入る）
+  const opp = side === "white" ? "black" : "white";
+  let selfInc = 0, oppInc = 0;
+  cand.links.forEach(conn => {
+    if (conn.owner === side) selfInc++;
+    else if (conn.owner === opp) oppInc++;
+    if (conn.owner) P(conn.owner).income += 1;
+  });
+  log(P(side).tname + " が " + colorNameJa(cand.color) + " を " + cand.srcName + "→" + cand.dest +
+      "（" + cand.totalLen + " リンク｜自分+" + selfInc + (oppInc > 0 ? "・相手に+" + oppInc + "献上" : "") + "）");
+
+  // 演出用：このルートのhex（経由地＋線路）を記録して光らせる
+  const routeHexes = new Set();
+  cand.links.forEach(conn => {
+    if (LOCS[conn.from]) routeHexes.add(LOCS[conn.from].key);
+    if (LOCS[conn.to]) routeHexes.add(LOCS[conn.to].key);
+    (conn.hexPath || []).forEach(k => routeHexes.add(k));
+  });
+  UI_FX.routes.push({ hexKeys: [...routeHexes], color: cand.color, side, label: niceName(cand.srcName) + "→" + niceName(cand.dest) });
+  if (UI_FX.routes.length > 1) UI_FX.routes.shift();
+}
+
+/* ---------- ゲーム状態 ---------- */
+const CITY_COLORS = { red:"#c0392b", blue:"#2471c2", purple:"#8e44ad", yellow:"#e2b93b", black:"#2c2c2c" };
+const CUBE_COLORS = ["red","blue","purple","yellow","black"];
+const CITY_LIST = Object.values(LOCS).filter(l => l.t === "city");
+let G = null;
+
+/* ---------- UI演出用の状態（直近の動きを可視化） ---------- */
+let UI_FX = {
+  oppTiles: new Set(),  // 相手(CPU)が直近に敷設したhexキー
+  oppUrb: new Set(),    // 相手(CPU)が直近に都市化した町名
+  routes: [],           // 今ターンの配送ルート [{hexKeys:[...], color, side}]
+};
+function fxResetTurn() { UI_FX.oppTiles = new Set(); UI_FX.oppUrb = new Set(); UI_FX.routes = []; }
+// CPU(相手)の今ターン敷設hexを記録（建設前後の差分。thrashに強い）
+function fxSnapshotOppTiles(side, beforeSet) {
+  const now = myNetworkHexes(side);
+  UI_FX.oppTiles = new Set([...now].filter(k => !beforeSet.has(k)));
+}
+
+function freshPlayer(id, name) {
+  return { id, name, cash:10, income:0, shares:2, engine:1, tilesThisTurn:0, engineUpgraded:false, isAI: id==="ai" };
+}
+
+function newGame(humanIsWhite) {
+  // 盤の初期状態スナップショット(HEX_PRISTINE)から完全復元（都市化されたtownをtownに戻す）。
+  Object.values(HEX).forEach(h => {
+    const o = HEX_PRISTINE[h.key];
+    if (!o) return;
+    h.t = o.t; h.tile = null; h.goods = [];
+    h.isNew = false; h.newCityId = null;
+    h.color = o.color;
+    h.nums = (o.nums||[]).slice();
+    h.numColors = (o.numColors||[]).slice();
+  });
+  resetTilePool();
+  G_URBANIZATIONS = [];
+  G_PLACEMENTS = [];
+  const white = freshPlayer(humanIsWhite ? "human" : "ai", "White");
+  const black = freshPlayer(humanIsWhite ? "ai" : "human", "Black");
+  white.side = "white"; black.side = "black";
+  white.token = "#3f8efc"; black.token = "#e8743b";
+  white.tname = "あなた"; black.tname = "θ-K Mk.II";
+  if (white.id === "ai") { white.tname = "θ-K Mk.II"; black.tname = "あなた"; }
+  G = {
+    turn:1, players:{white,black},
+    bag:[], display:{white:{},black:{}},
+    phase:null, order:[], idx:0, moveRound:1,
+    log:[], actions:{},
+    selectableActions:["First Move","First Build","Engineer","Locomotive","Production","Urbanization"],
+    over:false, winner:null,
+  };
+  ["red","blue","purple","yellow"].forEach(col => { for(let i=0;i<20;i++) G.bag.push(col); });
+  for(let i=0;i<14;i++) G.bag.push("black");
+  shuffle(G.bag);
+  // 各都市に3個
+  Object.values(LOCS).filter(l=>l.t==="city").forEach(city => {
+    city.goods = [];
+    for(let i=0;i<3;i++) if(G.bag.length) city.goods.push(G.bag.pop());
+  });
+  Object.values(LOCS).filter(l=>l.t==="town").forEach(t => t.goods = []);
+  initDisplay();
+  log("蒸気鉄道デュエル — 全8ターン。あなたは" + (humanIsWhite ? "White（青）" : "Black（橙）") + "です。");
+  startTurn();
+}
+
+function shuffle(a) { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]; } }
+// SIM_MODE：先読みロールアウト中はログ・UI・乱数演出を抑制し、ネストしたロールアウトを止める。
+let SIM_MODE = false;
+function log(s) { if (SIM_MODE) return; G.log.unshift(s); if(G.log.length>5000) G.log.pop(); if(typeof renderLog==="function") renderLog(); }
+function firstSideForTurn(t) { return [1,3,6,8].includes(t) ? "white" : "black"; }
+function turnOrder() { const f=firstSideForTurn(G.turn); return f==="white"?["white","black"]:["black","white"]; }
+function P(side) { return G.players[side]; }
+function human() { return G.players.white.id==="human" ? G.players.white : G.players.black; }
+function ai() { return G.players.white.id==="ai" ? G.players.white : G.players.black; }
+
+/* ---------- 新都市 ---------- */
+const NEW_CITY_TILES = [
+  {id:"A",color:"red",label:"赤都市(A)"},{id:"B",color:"blue",label:"青都市(B)"},
+  {id:"C",color:"black",label:"黒都市(C)"},{id:"D",color:"black",label:"黒都市(D)"},
+  {id:"E",color:"yellow",label:"黄都市(E)"},{id:"F",color:"purple",label:"紫都市(F)"},
+  {id:"G",color:"black",label:"黒都市(G)"},{id:"H",color:"black",label:"黒都市(H)"},
+];
+function availableNewCityTiles() {
+  const used = new Set(Object.values(LOCS).filter(h=>h.isNew).map(h=>h.newCityId));
+  return NEW_CITY_TILES.filter(t=>!used.has(t.id));
+}
+function urbanizeTown(townName, newCityId) {
+  const h = LOCS[townName];
+  if (!h || h.t !== "town") return {ok:false,msg:"町を選択してください。"};
+  const avail = availableNewCityTiles();
+  if (!avail.length) return {ok:false,msg:"新都市タイルがありません。"};
+  const tile = avail.find(t=>t.id===newCityId) || avail[0];
+  // 元の町の状態を完全保存（キャンセル時に町タイル＝線路ごと完全復元するため）
+  const prev = { t: h.t, color: h.color, nums: (h.nums||[]).slice(), numColors: (h.numColors||[]).slice(),
+                 tile: h.tile, isNew: h.isNew, newCityId: h.newCityId };
+  h.t = "city"; h.color = tile.color; h.nums = []; h.goods = h.goods||[];
+  h.isNew = true; h.newCityId = tile.id; h.numColors = [];
+  h.tile = null;
+  G_URBANIZATIONS.push({ side: null, townName, prev }); // sideはUI側でセット
+  log("都市化: " + townName + " が新都市" + tile.label + "になりました。");
+  return {ok:true};
+}
+
+/* ---------- 株式 ---------- */
+function issueShare(p) {
+  if (p.shares >= 15) return;
+  p.shares++; p.cash += 5;
+  log(p.tname + " が株式を1株発行（$5受取）。");
+}
+
+/* ---------- アクション ---------- */
+function takeAction(side, name) {
+  if (name && !G.actions[name]) {
+    G.actions[name] = side;
+    if (name === "Locomotive") {
+      const p = P(side); if(p.engine<6){ p.engine++; log(p.tname+" が機関車強化（→"+p.engine+"）"); }
+    } else log(P(side).tname+" が「"+actionNameJa(name)+"」を選択。");
+  } else log(P(side).tname+" はアクションを選択しませんでした。");
+}
+
+/* ---------- Goods Display ---------- */
+const DISPLAY_NEW_CITY = {
+  white:{3:"A",4:"B",5:"C",6:"D"},
+  black:{1:"E",2:"F",3:"G",4:"H"},
+};
+const DISPLAY_CITIES = {
+  1:["Burlington","Portland"],2:["Manchester","NewHaven"],
+  3:["Concord","Albany"],4:["Providence","Albany"],
+  5:["Boston","NewYork"],6:["NewYork","Boston"],
+};
+function initDisplay() {
+  G.display = {white:{},black:{}};
+  ["white","black"].forEach(side => {
+    for(let n=1;n<=6;n++) {
+      G.display[side][n] = [];
+      for(let i=0;i<3;i++) if(G.bag.length) G.display[side][n].push(G.bag.pop());
+      if(DISPLAY_NEW_CITY[side][n]) {
+        for(let i=0;i<2;i++) if(G.bag.length) G.display[side][n].push(G.bag.pop());
+      }
+    }
+  });
+}
+
+/* ---------- フェーズエンジン ---------- */
+function startTurn() {
+  G.phase="issue"; G.order=turnOrder(); G.idx=0;
+  Object.values(G.players).forEach(p=>{ p.tilesThisTurn=0; p.engineUpgraded=false; p._incomeStart=p.income; });
+  G.actions={};
+  G_PLACEMENTS=[]; G_URBANIZATIONS=[];
+  G_PLACEMENTS=[];
+  fxResetTurn(); // 演出（相手の敷設・都市化・配送ルート）を今ターン分にリセット
+  log("— ターン "+G.turn+" — 先手: "+P(turnOrder()[0]).tname);
+  stepPhase();
+}
+function stepPhase() {
+  switch(G.phase) {
+    case "issue":   return phaseIssue();
+    case "actions": return phaseActions();
+    case "build":   return phaseBuild();
+    case "move":    return phaseMove();
+    case "income":  return phaseIncome();
+  }
+}
+function applyBuildOrder() {
+  const first = G.actions["First Build"];
+  if (first) G.order = [first, first==="white"?"black":"white"];
+  else G.order = turnOrder();
+  G.idx = 0;
+}
+function applyMoveOrder() {
+  const first = G.actions["First Move"];
+  if (first) G.order = [first, first==="white"?"black":"white"];
+  else G.order = turnOrder();
+  G.idx = 0;
+}
+
+function phaseIssue() {
+  while(G.idx < 2) {
+    const side = G.order[G.idx], p = P(side);
+    if(p.isAI) { aiIssue(p); G.idx++; }
+    else { ui_mode="issue"; ui_render(); return; }
+  }
+  G.phase="actions"; G.idx=0; stepPhase();
+}
+function humanIssueDone() { G.idx++; if(G.idx<2) phaseIssue(); else { G.phase="actions"; G.idx=0; stepPhase(); } }
+
+function phaseActions() {
+  while(G.idx < 2) {
+    const side = G.order[G.idx], p = P(side);
+    if(p.isAI) {
+      aiSelectAction(p);
+      // AIの都市化はbuildフェーズで実行（ここでは選択のみ）
+      G.idx++;
+    }
+    else { ui_mode="actions"; ui_render(); return; }
+  }
+  G.phase="build"; applyBuildOrder();
+  Object.values(G.players).forEach(x => { x.tilesThisTurn=0; x.urbanizedThisTurn=false; });
+  G_PLACEMENTS=[]; G_URBANIZATIONS=[];
+  stepPhase();
+}
+
+function humanActionDone(name) {
+  takeAction(human().side, name);
+  // 都市化はbuildフェーズで実行するので、ここでは選択のみ記録
+  G.idx++;
+  if(G.idx<2) phaseActions();
+  else {
+    G.phase="build"; applyBuildOrder();
+    Object.values(G.players).forEach(x => { x.tilesThisTurn=0; x.urbanizedThisTurn=false; });
+    G_PLACEMENTS=[]; G_URBANIZATIONS=[];
+    stepPhase();
+  }
+}
+
+// 都市化完了 → 敷設フェーズへ（buildフェーズ内から呼ばれる）
+function humanUrbanizeDone() {
+  human().urbanizedThisTurn = true;
+  ui_mode = "build"; ui_render();
+}
+
+function phaseBuild() {
+  while(G.idx < 2) {
+    const side = G.order[G.idx], p = P(side);
+    if(p.isAI) {
+      // AIの場合: 都市化アクションを持っていれば建設前に都市化
+      if (G.actions["Urbanization"] === side && !p.urbanizedThisTurn) {
+        aiDoUrbanize(side);
+        p.urbanizedThisTurn = true;
+      }
+      aiBuild(p); G.idx++;
+    }
+    else {
+      // 人間の場合: 都市化アクションを持っていてまだ都市化していなければ都市化UI
+      if (G.actions["Urbanization"] === p.side && !p.urbanizedThisTurn) {
+        ui_mode = "urbanize"; ui_render(); return;
+      }
+      ui_mode="build"; ui_render(); return;
+    }
+  }
+  G.phase="move"; G.moveRound=1; applyMoveOrder(); G.idx=0; stepPhase();
+}
+
+/* このターンのプレイヤーの全敷設を取り消す（自分の手番分のみ）
+   都市化も取り消す */
+function undoAllPlacements(side) {
+  // 自分のtileのみ取り消す（相手のtileはそのまま）
+  const mine = G_PLACEMENTS.filter(pl => {
+    const h = HEX[pl.hexKey];
+    return h && h.tile && h.tile.owner === side;
+  });
+  const count = mine.length;
+  // 逆順で取り消す
+  for (let i = G_PLACEMENTS.length - 1; i >= 0; i--) {
+    const pl = G_PLACEMENTS[i];
+    const h = HEX[pl.hexKey];
+    if (!h || !h.tile || h.tile.owner !== side) continue;
+    // 取り消し処理
+    const d = TILE_DEFS[pl.newTile.typeId];
+    const p = G.players[side];
+    if (d && d.stock !== undefined) d.stock++;
+    if (pl.usedDisk) TOWN_DISK_STOCK++;
+    p.cash += pl.cost;
+    p.tilesThisTurn -= pl.tileCount;
+    if (pl.prevTile) {
+      const pd = TILE_DEFS[pl.prevTile.typeId];
+      if (pd && pd.stock !== undefined) pd.stock--;
+      if (pl.prevTile.hasDisk) TOWN_DISK_STOCK--;
+      h.tile = pl.prevTile;
+    } else {
+      h.tile = null;
+    }
+    G_PLACEMENTS.splice(i, 1);
+  }
+
+  // 今ターンの都市化も取り消す → 都市化権利を復元する
+  if (G_URBANIZATIONS) {
+    for (let i = G_URBANIZATIONS.length - 1; i >= 0; i--) {
+      const u = G_URBANIZATIONS[i];
+      if (u.side !== side) continue;
+      const h = LOCS[u.townName];
+      if (h) {
+        if (u.prev) {
+          // 保存した元状態で完全復元（町タイル＝線路も含む）
+          h.t = u.prev.t; h.color = u.prev.color; h.nums = u.prev.nums; h.numColors = u.prev.numColors;
+          h.tile = u.prev.tile; h.isNew = u.prev.isNew; h.newCityId = u.prev.newCityId;
+        } else {
+          // 旧データのフォールバック（素の町として復元）
+          h.t = "town"; h.color = null; h.nums = []; h.isNew = false; h.newCityId = null; h.numColors = [];
+        }
+        log(P(side).tname + " の都市化（" + u.townName + "）を取り消しました。");
+      }
+      G_URBANIZATIONS.splice(i, 1);
+    }
+    // 都市化権利を復元（次回phaseBuildで再度都市化UIを表示）
+    G.players[side].urbanizedThisTurn = false;
+  }
+
+  if (count > 0) log(P(side).tname + " のこのターンの敷設（" + count + "枚）を取り消しました。");
+  return count;
+}
+
+function humanBuildDone() {
+  const errors = checkBuildValid(human().side);
+  if (errors.length) {
+    // エラー理由をログに記録してから全取り消し
+    const count = undoAllPlacements(human().side);
+    log("⚠ 禁止事項のため" + count + "枚の敷設を全て取り消しました：");
+    errors.forEach(msg => log("  • " + msg));
+    // ui_modeはbuildのまま最初からやり直し
+    if (typeof ui_render === "function") ui_render();
+    return errors;
+  }
+  // 正常終了
+  G_PLACEMENTS = G_PLACEMENTS.filter(pl => {
+    const h = HEX[pl.hexKey];
+    return h && h.tile && h.tile.owner !== human().side;
+  });
+  G.idx++;
+  if (G.idx < 2) phaseBuild();
+  else { G.phase = "move"; G.moveRound = 1; applyMoveOrder(); G.idx = 0; stepPhase(); }
+  return [];
+}
+
+function phaseMove() {
+  while(G.idx < 2) {
+    const side = G.order[G.idx], p = P(side);
+    if(p.isAI) { aiMove(p); G.idx++; }
+    else { ui_mode="move"; ui_render(); return; }
+  }
+  G.moveRound++;
+  if(G.moveRound <= 3) { applyMoveOrder(); G.idx=0; stepPhase(); }
+  else { G.phase="income"; stepPhase(); }
+}
+function humanMoveDone() { G.idx++; if(G.idx<2) phaseMove(); else { G.moveRound++; if(G.moveRound<=3){applyMoveOrder();G.idx=0;stepPhase();}else{G.phase="income";stepPhase();} } }
+
+function phaseIncome() {
+  // 収入
+  Object.values(G.players).forEach(p => { p.cash += p.income; });
+  log("収入獲得: あなた $"+human().income+"、CPU $"+ai().income+"。");
+  // 費用
+  Object.values(G.players).forEach(p => {
+    const exp = p.shares + p.engine;
+    if(p.cash >= exp) { p.cash -= exp; log(p.tname+" が費用 $"+exp+" を支払いました。"); }
+    else {
+      const owe = exp - p.cash; p.cash = 0; p.income = Math.max(p.income - owe, -99);
+      log(p.tname+" の現金が不足。収入 -"+owe+"。");
+      if(p.income < 0) { endGame("insolvency", p.side==="white"?"black":"white"); return; }
+    }
+  });
+  // 収入逓減
+  Object.values(G.players).forEach(p => {
+    let red = 0;
+    if(p.income > 49) red=10; else if(p.income>=41) red=8; else if(p.income>=31) red=6;
+    else if(p.income>=21) red=4; else if(p.income>=11) red=2;
+    if(red>0){ p.income-=red; log(p.tname+" 収入逓減 -"+red+"。"); }
+  });
+  // Goods Growth（最終ターン(8)はこの直後に点数計算で終了するため、商品補充は不要＝スキップ）
+  if (G.turn < 8) goodsGrowth();
+  // ターン進行
+  if(G.turn >= 8) { endGame("turns", null); return; }
+  G.turn++;
+  startTurn();
+}
+
+/* ---------- AI ---------- */
+/* ===== AI戦略エンジン ===== */
+
+// 自分のネットワークのhexキーセット
+function myNetworkHexes(side) {
+  const net = new Set();
+  Object.values(HEX).forEach(h => {
+    if (h.tile && h.tile.owner === side) net.add(h.key);
+  });
+  return net;
+}
+
+// 軽量な期待収入計算：既存の接続グラフから最大3回分の輸送収入を推定
+// buildConnectionGraphを1回だけ呼んで再利用
+function calcIncomeFromConns(side, engineLevel, conns) {
+  // 各接続について荷物マッチを計算
+  const candidates = [];
+  const seen = new Set();
+
+  for (const conn of conns) {
+    const srcLoc = LOCS[conn.from], dstLoc = LOCS[conn.to];
+    if (!srcLoc || !dstLoc) continue;
+    const linkLen = conn.hexPath.length + 1;
+    if (linkLen > engineLevel) continue;
+
+    // このリンクを自分が所有しているか
+    let isOwn;
+    if (conn._owner !== undefined) {
+      // 計画中の仮想リンク：明示された所有者で判定
+      isOwn = conn._owner === side;
+    } else if (conn.hexPath.length === 0) {
+      isOwn = true; // 直接隣接
+    } else {
+      const h = HEX[conn.hexPath[0]];
+      isOwn = !!(h && h.tile && (
+        h.tile.owner === side ||
+        (h.tile.pairOwners && h.tile.pairOwners.some(o => o === side))
+      ));
+    }
+    if (!isOwn) continue;
+
+    (srcLoc.goods || []).forEach((g, gi) => {
+      if (dstLoc.t === "city" && dstLoc.color === g) {
+        const k = conn.from + ":" + gi + ":" + conn.to;
+        if (!seen.has(k)) {
+          seen.add(k);
+          candidates.push({ inc: linkLen, key: k });
+        }
+      }
+    });
+  }
+
+  candidates.sort((a, b) => b.inc - a.inc);
+  return candidates.slice(0, 3).reduce((s, c) => s + c.inc, 0);
+}
+
+/* ---------- 連鎖配送を辿る収入評価（建設プランナー用） ----------
+   単一リンクではなく、機関車レベルまでリンクを連鎖させた配送を列挙し、
+   「3移動ラウンドで実現できる上位3配送の自己所有収入の合計」を返す。
+   conns には計画中の仮想リンク（_owner付き）を混ぜてよい。 */
+function linkOwnedBy(l, side) {
+  if (l._owner !== undefined) return l._owner === side; // 計画中の仮想リンク
+  if (l.owner !== undefined) return l.owner === side;   // 接続グラフが記録した正確な所有者（複線対応）
+  if (!l.hexPath || !l.hexPath.length) return false;    // 直接隣接は無所有扱い
+  const h = HEX[l.hexPath[0]];
+  return !!(h && h.tile && (h.tile.owner === side ||
+    (h.tile.pairOwners && h.tile.pairOwners.some(o => o === side))));
+}
+
+function realizableIncomeFromConns(side, engine, conns) {
+  // from別の隣接リンクを一度だけ索引化（BFSの毎回フィルタを避ける）
+  const adj = new Map();
+  for (const c of conns) {
+    if (!adj.has(c.from)) adj.set(c.from, []);
+    adj.get(c.from).push(c);
+  }
+  const res = [];
+  allCities().forEach(src => {
+    (src.goods || []).forEach((color, gi) => {
+      // 源キューブごとに、機関車レベルまでリンクを辿って配送先（色一致都市）を探す
+      const queue = [{ at: src.name, links: [], visited: new Set([src.name]) }];
+      const found = {};
+      while (queue.length) {
+        const st = queue.shift();
+        if (st.links.length >= engine) continue;
+        (adj.get(st.at) || []).filter(c => !st.visited.has(c.to)).forEach(conn => {
+          const nv = new Set(st.visited); nv.add(conn.to);
+          const nl = st.links.concat([conn]);
+          const loc = LOCS[conn.to];
+          if (loc && loc.t === "city" && loc.color === color) {
+            const k = conn.to + ":" + nl.length;
+            const ownInc = nl.reduce((s, l) => s + (linkOwnedBy(l, side) ? 1 : 0), 0);
+            const cand = { srcName: src.name, gi, dest: conn.to, ownInc, totalLen: nl.length };
+            if (!found[k] || found[k].ownInc < ownInc) found[k] = cand;
+          } else if (loc && (loc.t === "city" || adj.has(conn.to))) {
+            // 都市、または先へ続くリンクを持つ町（実タイル町＋計画中の貫通町）を経由可能とみなす
+            queue.push({ at: conn.to, links: nl, visited: nv });
+          }
+        });
+      }
+      Object.values(found).forEach(c => res.push(c));
+    });
+  });
+  // 1ターン3配送まで。同一源キューブは1回のみ使用。自己所有収入(ownInc)の高い順に上位3つ。
+  res.sort((a, b) => b.ownInc - a.ownInc || b.totalLen - a.totalLen);
+  const usedCube = new Set();
+  let total = 0, picked = 0;
+  for (const c of res) {
+    if (c.ownInc <= 0) continue;            // 自分が1リンクも持たない配送は収入にならない
+    const cubeKey = c.srcName + ":" + c.gi;
+    if (usedCube.has(cubeKey)) continue;    // 同じキューブの二重計上を防ぐ
+    usedCube.add(cubeKey);
+    total += c.ownInc;
+    if (++picked >= 3) break;
+  }
+  return total;
+}
+
+// リンクの実所有者（white/black/null）を返す。献上判定（相手所有リンク）に使う。
+function linkOwnerSide(l) {
+  if (l._owner !== undefined) return l._owner;
+  if (l.owner !== undefined) return l.owner;
+  if (!l.hexPath || !l.hexPath.length) return null;
+  const h = HEX[l.hexPath[0]];
+  if (h && h.tile) {
+    if (h.tile.owner) return h.tile.owner;
+    if (h.tile.pairOwners) return h.tile.pairOwners.find(o => o) || null;
+  }
+  return null;
+}
+
+// realizableIncomeFromConns と同じ「上位3配送」を選び、自分の収入と
+// その配送で相手に献上するリンク数（＝相手所有リンク数）を併せて返す。
+// 献上回避バイパス（②a）の評価に使う。
+function realizableStatsFromConns(side, engine, conns) {
+  const opp = side === "white" ? "black" : "white";
+  const adj = new Map();
+  for (const c of conns) {
+    if (!adj.has(c.from)) adj.set(c.from, []);
+    adj.get(c.from).push(c);
+  }
+  const res = [];
+  allCities().forEach(src => {
+    (src.goods || []).forEach((color, gi) => {
+      const queue = [{ at: src.name, links: [], visited: new Set([src.name]) }];
+      const found = {};
+      while (queue.length) {
+        const st = queue.shift();
+        if (st.links.length >= engine) continue;
+        (adj.get(st.at) || []).filter(c => !st.visited.has(c.to)).forEach(conn => {
+          const nv = new Set(st.visited); nv.add(conn.to);
+          const nl = st.links.concat([conn]);
+          const loc = LOCS[conn.to];
+          if (loc && loc.t === "city" && loc.color === color) {
+            const k = conn.to + ":" + nl.length;
+            const ownInc = nl.reduce((s, l) => s + (linkOwnedBy(l, side) ? 1 : 0), 0);
+            const oppInc = nl.reduce((s, l) => s + (linkOwnerSide(l) === opp ? 1 : 0), 0);
+            const cand = { srcName: src.name, gi, ownInc, oppInc, totalLen: nl.length };
+            if (!found[k] || found[k].ownInc < ownInc) found[k] = cand;
+          } else if (loc && (loc.t === "city" || adj.has(conn.to))) {
+            queue.push({ at: conn.to, links: nl, visited: nv });
+          }
+        });
+      }
+      Object.values(found).forEach(c => res.push(c));
+    });
+  });
+  res.sort((a, b) => b.ownInc - a.ownInc || b.totalLen - a.totalLen);
+  const usedCube = new Set();
+  let income = 0, oppForeign = 0, picked = 0;
+  for (const c of res) {
+    if (c.ownInc <= 0) continue;
+    const cubeKey = c.srcName + ":" + c.gi;
+    if (usedCube.has(cubeKey)) continue;
+    usedCube.add(cubeKey);
+    income += c.ownInc; oppForeign += c.oppInc;
+    if (++picked >= 3) break;
+  }
+  return { income, oppForeign };
+}
+
+// ②-lite 将来 throughput ポテンシャル：機関車上限を6・配送数の上限を無しにして、
+// 現在盤上の全キューブを「自分の収入として運べる場合の総リンク数」を測る。
+// 単一ターンの gainNow（現機関車・上位3配送）では見えない“幹線の再利用価値”を近似する。
+// 値が高いリンク＝将来荷物が湧き続けたとき何度も使える幹線。
+function realizablePotentialFromConns(side, conns) {
+  const adj = new Map();
+  for (const c of conns) { if (!adj.has(c.from)) adj.set(c.from, []); adj.get(c.from).push(c); }
+  let total = 0;
+  allCities().forEach(src => {
+    (src.goods || []).forEach((color) => {
+      const queue = [{ at: src.name, links: [], visited: new Set([src.name]) }];
+      let best = 0;
+      while (queue.length) {
+        const st = queue.shift();
+        if (st.links.length >= 6) continue;          // 機関車上限は最大(6)で緩める
+        (adj.get(st.at) || []).filter(c => !st.visited.has(c.to)).forEach(conn => {
+          const nv = new Set(st.visited); nv.add(conn.to);
+          const nl = st.links.concat([conn]);
+          const loc = LOCS[conn.to];
+          if (loc && loc.t === "city" && loc.color === color) {
+            const ownInc = nl.reduce((s, l) => s + (linkOwnedBy(l, side) ? 1 : 0), 0);
+            if (ownInc > best) best = ownInc;
+          } else if (loc && (loc.t === "city" || adj.has(conn.to))) {
+            queue.push({ at: conn.to, links: nl, visited: nv });
+          }
+        });
+      }
+      total += best;                                  // 配送数の上限なし（将来的に全部運ぶ前提）
+    });
+  });
+  return total;
+}
+
+// 領域の評価：接続先(destLoc)の周辺にある都市・町群の「将来価値」を測る。
+// 密集（近いほど高い）× 色の荷物回転 × 未確保度（自網=既得は低/相手網=競合は中/未確保=満額）。
+// 「良い不動産（密集した高回転エリア）へ先に背骨を伸ばす」誘導。相手回避ではなく先取りが目的。
+function regionQuality(destLoc, nodeList, ownNet, oppNet) {
+  const colorRich = { red:1.0, blue:1.0, purple:1.0, yellow:1.0, black:1.1 }; // 黒は専用シンクで回転高め
+  const dc = hexCenter(destLoc.c, destLoc.r);
+  let val = 0;
+  for (const nd of nodeList) {
+    if (nd === destLoc) continue;
+    const cc = hexCenter(nd.c, nd.r);
+    const near = 1 - Math.hypot(cc.x - dc.x, cc.y - dc.y) / 170; // ~3hex以内で線形に減衰
+    if (near <= 0) continue;
+    const rich = nd.t === "city" ? (colorRich[nd.color] || 1.0) : 0.5; // 町は将来の都市候補として半分
+    let claim = 1.0;
+    if (ownNet.has(nd.key)) claim = 0.3;        // 既に自網＝もう持っている（新規価値は小）
+    else if (oppNet.has(nd.key)) claim = 0.6;   // 相手網＝競合（けん制はFirst系で別途）
+    val += near * rich * claim;
+  }
+  return val;
+}
+
+// 都市化による期待収入増加（超軽量版）
+function estimateUrbanGainLight(side, engineLevel, connsNow, netHexes) {
+  const avail = availableNewCityTiles();
+  if (!avail.length || netHexes.size === 0) return { gain: 0, bestTown: null, bestTile: null };
+
+  const curInc = realizableIncomeFromConns(side, engineLevel, connsNow);
+  let bestGain = 0, bestTown = null, bestTile = null;
+
+  // 自ネットワーク近くの町のみ（最大3町×最大タイル数）
+  const nearTowns = Object.values(LOCS).filter(l => {
+    if (l.t !== "town") return false;
+    for (let e = 0; e < 6; e++) {
+      const nb = edgeNeighborHex(l, e);
+      if (nb && (netHexes.has(nb.key) || (nb.t === "city"))) return true;
+    }
+    return false;
+  }).slice(0, 3);
+
+  for (const town of nearTowns) {
+    for (const tile of avail.slice(0, 2)) { // 最大2タイル種類のみ試す
+      const orig = { t: town.t, color: town.color, isNew: town.isNew, newCityId: town.newCityId };
+      town.t = "city"; town.color = tile.color; town.isNew = true; town.newCityId = tile.id;
+      const connsNew = buildConnectionGraph();
+      const inc = realizableIncomeFromConns(side, engineLevel, connsNew);
+      town.t = orig.t; town.color = orig.color; town.isNew = orig.isNew; town.newCityId = orig.newCityId;
+      if (inc - curInc > bestGain) { bestGain = inc - curInc; bestTown = town.name; bestTile = tile.id; }
+    }
+  }
+  return { gain: bestGain, bestTown, bestTile };
+}
+
+// 都市化の総合評価：自分の収入増 ＋ 相手の収入減（妨害）。
+// 相手の経路上の町を「相手が運ぶ色」で都市化すると、長距離配送が途中の同色新都市で打ち切られ
+// リンク数（＝相手の収入）が減る。自分の益と妨害益を合わせて最良の町＋色を選ぶ。
+function evalUrbanization(side) {
+  const avail = availableNewCityTiles();
+  if (!avail.length) return null;
+  const opp = side === "white" ? "black" : "white";
+  const myEngine = P(side).engine, oppEngine = P(opp).engine;
+  const net = myNetworkHexes(side);
+
+  const baseConns = buildConnectionGraph();
+  const myBase  = realizableIncomeFromConns(side, myEngine, baseConns);
+  const oppBase = realizableIncomeFromConns(opp,  oppEngine, baseConns);
+
+  // 候補町：タイルのある町（相手の経路上＝妨害候補）＋ 自網に隣接する町（自分の益）
+  const townSet = new Set();
+  Object.values(LOCS).forEach(l => {
+    if (l.t !== "town") return;
+    if (l.tile) { townSet.add(l.name); return; }
+    for (let e = 0; e < 6; e++) { const nb = edgeNeighborHex(l, e); if (nb && (net.has(nb.key) || nb.t === "city")) { townSet.add(l.name); break; } }
+  });
+  const towns = [...townSet].map(n => LOCS[n]).slice(0, 5);
+  const colorTiles = [...new Map(avail.map(t => [t.color, t])).values()]; // 色の重複を除く
+
+  let best = null;
+  for (const town of towns) {
+    for (const tile of colorTiles) {
+      const orig = { t: town.t, color: town.color, isNew: town.isNew, newCityId: town.newCityId, tile: town.tile };
+      town.t = "city"; town.color = tile.color; town.isNew = true; town.newCityId = tile.id; town.tile = null;
+      const conns2 = buildConnectionGraph();
+      const myAfter  = realizableIncomeFromConns(side, myEngine, conns2);
+      const oppAfter = realizableIncomeFromConns(opp,  oppEngine, conns2);
+      town.t = orig.t; town.color = orig.color; town.isNew = orig.isNew; town.newCityId = orig.newCityId; town.tile = orig.tile;
+
+      const ownGain = myAfter - myBase;
+      const denial  = oppBase - oppAfter;   // 相手の収入減（プラスほど妨害成功。マイナス＝相手を利するので避ける）
+      const score = ownGain + 1.0 * denial; // 妨害強化：相手の収入減を自分の益と同等に評価
+      if (!best || score > best.score) best = { town: town.name, tile: tile.id, score, ownGain, denial };
+    }
+  }
+  return best;
+}
+
+// 序盤(1-2ターン)の独占小ループ定石：東端の Town_8_3 を黄/紫都市に都市化し、
+// Boston(赤)-Providence(青)-新都市 の小ループを作って黄/紫キューブを独占する。
+// 条件：都市化が取れる／Town_8_3が素の町／相手が連結hexを未敷設／
+//       「Boston青＋Providence赤＋(両都市の黄+紫)」の合計が3以上（個々は0でも可）。
+// 色はキューブの多い方（黄=タイルE／紫=タイルF）。Boston+Providenceで決め、両方0なら周辺都市で決定。
+function openingMonopolyUrbanize(p, avail) {
+  if (G.turn > 2) return null;
+  if (!avail.includes("Urbanization")) return null;
+  const town = LOCS["Town_8_3"];
+  if (!town || town.t !== "town" || town.tile || town.isNew) return null;
+  const boston = LOCS["Boston"], prov = LOCS["Providence"];
+  if (!boston || !prov) return null;
+  // 相手が Town_8_3 の連結hex (6,7)/(6,8) か町本体(7,7) を既に押さえていたら独占不可。
+  const opp = p.side === "white" ? "black" : "white";
+  const oppHolds = k => { const h = HEX[k]; return h && h.tile && (h.tile.owner === opp || (h.tile.pairOwners && h.tile.pairOwners.includes(opp))); };
+  if (oppHolds("6,7") || oppHolds("6,8") || oppHolds("7,7")) return null;
+  const cnt = (loc, col) => (loc.goods || []).filter(g => g === col).length;
+  // ループ内で運べるキューブ：Bostonの青(→Providence)、Providenceの赤(→Boston)、両都市の黄/紫(→新都市)。
+  const bostonBlue = cnt(boston, "blue"), provRed = cnt(prov, "red");
+  let yellow = cnt(boston, "yellow") + cnt(prov, "yellow");
+  let purple = cnt(boston, "purple") + cnt(prov, "purple");
+  if (bostonBlue + provRed + yellow + purple < 3) return null; // 合計3以上（個々は0でも可）
+  // 色決定：Boston+Providence に黄/紫が無ければ、周辺都市(~5hex)の黄/紫で判断。
+  if (yellow === 0 && purple === 0) {
+    const tc = hexCenter(town.c, town.r);
+    allCities().forEach(c => {
+      if (Math.hypot(hexCenter(c.c, c.r).x - tc.x, hexCenter(c.c, c.r).y - tc.y) > 300) return;
+      yellow += cnt(c, "yellow"); purple += cnt(c, "purple");
+    });
+  }
+  const avTiles = availableNewCityTiles();
+  const hasE = avTiles.some(t => t.id === "E"); // 黄
+  const hasF = avTiles.some(t => t.id === "F"); // 紫
+  let tileId = (yellow >= purple) ? (hasE ? "E" : (hasF ? "F" : null))
+                                  : (hasF ? "F" : (hasE ? "E" : null));
+  if (!tileId) return null;
+  return { town: "Town_8_3", tile: tileId };
+}
+
+function aiSelectAction(p) {
+  const avail = G.selectableActions.filter(a => !G.actions[a]);
+  const net = myNetworkHexes(p.side);
+  const opp = p.side === "white" ? "black" : "white";
+
+  // 現在の接続グラフで収入計算（連鎖込み・1回だけ）
+  const conns = buildConnectionGraph();
+  const curInc = realizableIncomeFromConns(p.side, p.engine, conns);
+  const locoInc = p.engine < 6 ? realizableIncomeFromConns(p.side, p.engine + 1, conns) : curInc;
+  const locoGain = locoInc - curInc;
+  // アクション拒否用：相手が機関車を取ると収入がいくら伸びるか（妨害価値の見積り）。
+  const oppEngine = P(opp).engine;
+  const oppLocoGain = oppEngine < 6
+    ? realizableIncomeFromConns(opp, oppEngine + 1, conns) - realizableIncomeFromConns(opp, oppEngine, conns)
+    : 0;
+
+  // 都市化（ネットワークがある時のみ評価）。自分の益＋相手の妨害益を総合評価する。
+  let urbGain = 0, urbTown = null, urbTile = null;
+  const availNewCity = availableNewCityTiles();
+  if (avail.includes("Urbanization") && net.size > 0) {
+    const ur = evalUrbanization(p.side);
+    // 採用条件：自分の収入が増える（=接続して使える都市化）か、妨害が大きい（denial≥2）場合のみ。
+    // わずかな妨害(denial=1)だけの“接続しない無駄な都市化”は採らず、別アクションに回す。
+    if (ur && (ur.ownGain > 0 || ur.denial >= 2)) {
+      urbGain = ur.score; urbTown = ur.town; urbTile = ur.tile;
+      if (ur.denial >= 2 && ur.ownGain <= 0)
+        log(P(p.side).tname + " は都市化で相手の配送を妨害（" + niceName(ur.town) + "、相手収入-" + ur.denial + "見込み）。");
+    }
+  }
+  // 即収入増が無くても、網に隣接する素の町があれば都市化候補にする。
+  // 都市化は「町タイル代を払わず都市化＝配送先が増え、商品も降る」ため一般に得。
+  let nearUrbTown = null;
+  if (avail.includes("Urbanization") && net.size > 0 && availNewCity.length && !urbTown) {
+    nearUrbTown = Object.values(LOCS).find(l => {
+      if (l.t !== "town") return false;
+      for (let e = 0; e < 6; e++) { const nb = edgeNeighborHex(l, e); if (nb && net.has(nb.key)) return true; }
+      return false;
+    });
+  }
+
+  // ── 優先輸送 / 優先敷設（First Move / First Build）の評価 ──
+  // どちらも「自然手番で後手のとき」だけ価値がある（先手なら既に先に動けるので不要）。
+  const naturalFirst = turnOrder()[0] === p.side;
+  let firstMoveGain = 0, firstBuildGain = 0, firstBuildTxt = "";
+  if (!naturalFirst) {
+    // 優先輸送：相手も運べる荷物（競合キューブ）を、相手より先に確保できる益。
+    // 後手だと相手が先に奪うので、最も価値の高い競合キューブの自分収入を「失う恐れのある益」とみなす。
+    if (avail.includes("First Move")) {
+      const oppKeys = deliverableCubeKeys(opp, P(opp).engine);
+      deliveriesFrom(p.side, p.engine).forEach(c => {
+        if (c.ownInc > 0 && oppKeys.has(c.srcName + ":" + c.gi))
+          firstMoveGain = Math.max(firstMoveGain, c.ownInc);
+      });
+    }
+    // 優先敷設：相手ネットに隣接する“取り合い”区域に高価値リンクを先に引ける益。
+    // 相手と競合しない単独建設では先後の差が出ないので、相手ネット隣接時のみ計上する。
+    if (avail.includes("First Build")) {
+      const oppNet = myNetworkHexes(opp);
+      if (oppNet.size > 0) {
+        const cand = planBestLink(p, buildBudget(p), null);
+        if (cand && cand.gainNow > 0) {
+          const steps = cand.path.filter(s => { const h=HEX[s.key]; return h && (h.t==="land"||h.t==="town") && !h.tile; });
+          const contested = steps.some(s => {
+            for (let e = 0; e < 6; e++) { const nb = edgeNeighborHex(HEX[s.key], e); if (nb && oppNet.has(nb.key)) return true; }
+            return false;
+          });
+          if (contested) { firstBuildGain = cand.gainNow; firstBuildTxt = niceName(HEX[cand.dest]?.name || cand.dest); }
+        }
+      }
+    }
+  }
+
+  let pick = null;
+  // 機関車の先行投資：長い幹線は機関車が無いと活きない（6リンク幹線も engine5 だと5リンク止まり）。
+  // 即効果(locoGain)が0でも、費用増(+1/ターン)を概ね賄える範囲で 6 まで先行して上げておく。
+  // 序盤(engine<3、ターン4以下は engine<4)は無条件で土台を作る＝早期に長距離配送を解禁する。
+  const earlyGame = G.turn <= 4;
+  const newLocoExpense = p.shares + (p.engine + 1);
+  const proactiveLoco = p.engine < 6 && ((earlyGame ? p.engine < 4 : p.engine < 3) || p.income + 2 >= newLocoExpense);
+
+  // 機関車は永続的に効く（残り全ターン）。優先輸送/敷設は今ターン1回限りなので、
+  // 機関車が取れて有益(locoGain>0 or 先行投資)なら、その「繰り返し価値」を見積もって比較する。
+  // これを超える優先系だけが機関車に優先する（＝普段は機関車を優先＝あなたの指摘どおり）。
+  const turnsLeft = Math.max(1, 9 - G.turn);
+  const locoBeneficial = avail.includes("Locomotive") && (locoGain > 0 || proactiveLoco);
+  // 序盤は機関車の価値を1.3倍に底上げ（早期に上限を伸ばし、長距離配送を解禁するため）。
+  const locoRecurValue = locoBeneficial ? Math.max(locoGain, 0.5) * Math.min(turnsLeft, 4) * (earlyGame ? 1.3 : 1) : 0;
+
+  // アクション拒否（機関車）：自分が先手で相手より先にアクションを取れるとき、
+  // 相手が機関車を取ると大きく伸びる(oppLocoGain≥3)のに自分には強い手が無いなら、
+  // 機関車を奪って相手の強化を1ターン遅らせる（engine6で自分に無益でも妨害として取る）。
+  const denyLoco = naturalFirst && avail.includes("Locomotive") && oppLocoGain >= 3
+    && locoGain <= 1 && urbGain < 2 && firstMoveGain < 2 && firstBuildGain < 2;
+
+  // 序盤の独占小ループ定石（Town_8_3 を都市化して Boston-Providence と小ループ）。最優先で評価。
+  const opening = openingMonopolyUrbanize(p, avail);
+
+  if (opening) {
+    pick = "Urbanization";
+    log(P(p.side).tname + " は独占小ループ定石：Town_8_3 を" + (opening.tile === "E" ? "黄" : "紫") + "都市化（Boston-Providence と小ループ）。");
+  } else if (firstBuildGain >= 2 && firstBuildGain >= locoRecurValue && firstBuildGain >= urbGain) {
+    // 優先敷設：後手で相手と競合する区域に高価値リンクを先に引く。
+    pick = "First Build";
+    log(P(p.side).tname + " は優先敷設で競合区域のリンクを先に確保（" + firstBuildTxt + "、+" + firstBuildGain + "見込み）。");
+  } else if (denyLoco) {
+    // 機関車を奪って相手の強化を妨害（自分のengineが6なら純粋な妨害、6未満なら自分も強化しつつ妨害）。
+    pick = "Locomotive";
+    log(P(p.side).tname + (p.engine >= 6
+      ? " は機関車を取って相手の強化を妨害（相手+" + oppLocoGain + "を阻止）。"
+      : " は機関車を強化しつつ相手の強化も妨害（相手+" + oppLocoGain + "を阻止）。"));
+  } else if (avail.includes("Locomotive") && locoGain > 0 && locoGain >= urbGain) {
+    // 機関車+1で実際に配送が増え、都市化の益以上なら機関車
+    pick = "Locomotive";
+  } else if (avail.includes("Locomotive") && proactiveLoco && urbGain < 2) {
+    // 先行投資：高価値の都市化(urbGain>=2)が無ければ機関車を6まで伸ばす
+    pick = "Locomotive";
+  } else if (avail.includes("Urbanization") && (urbTown || nearUrbTown)) {
+    // 都市化を Engineer より優先：配送先(新都市)が増え、商品も降り、町タイル代も不要で一般に得。
+    pick = "Urbanization";
+  } else if (avail.includes("Engineer") && net.size > 0 && p.cash >= 4) {
+    // ロコ・都市化が無ければ Engineer で4枚敷設（拡張）。
+    pick = "Engineer";
+  } else if (avail.includes("Locomotive") && p.engine < 6 && p.income > 0) {
+    pick = "Locomotive";
+  }
+  // 注：優先輸送(First Move)は基本的に選ばない（都市化・優先敷設・エンジニア・機関車を優先）。
+
+  takeAction(p.side, pick);
+  if (pick === "Urbanization") {
+    if (opening) {
+      // 独占小ループ定石：Town_8_3 を黄/紫で都市化し、以降の建設フェーズで小ループを閉じる（序盤中ラッチ）。
+      p._urbanizeTown = opening.town; p._urbanizeTile = opening.tile; p._openedT83 = true;
+    } else if (urbTown) { p._urbanizeTown = urbTown; p._urbanizeTile = urbTile; }
+    else if (nearUrbTown) {
+      // 色は黒（最も多く降る・どの都市色とも別枠で扱いやすい）を優先、無ければ先頭
+      const tile = availNewCity.find(t => t.color === "black") || availNewCity[0];
+      p._urbanizeTown = nearUrbTown.name; p._urbanizeTile = tile.id;
+    }
+  }
+}
+
+// 都市化アクションを消費したのに何も建てない無駄を避けるための「有用な町」フォールバック。
+// 自網に隣接する町を最優先、無ければ荷物の多い都市に隣接する町を選ぶ。色は黒（万能シンク）優先。
+// 自網にも都市にも隣接しない孤立した町しか無ければ null（さすがに無意味なので都市化しない）。
+function bestFallbackUrbanize(side) {
+  const avail = availableNewCityTiles();
+  if (!avail.length) return null;
+  const net = myNetworkHexes(side);
+  let best = null;
+  Object.values(LOCS).forEach(t => {
+    if (t.t !== "town" || t.tile) return;
+    // 自網に隣接する町だけを候補にする。隣接しない町を都市化しても今ターン繋がらず、
+    // 接続しない孤立都市を端に置く無駄手になるため除外する（その場合は都市化自体を見送る）。
+    let adj = false;
+    for (let e = 0; e < 6; e++) { const nb = edgeNeighborHex(t, e); if (nb && net.has(nb.key)) { adj = true; break; } }
+    if (!adj) return;
+    // 隣接する町の中で、荷物の多い都市に近いほど将来の配送先・供給源として価値が高い。
+    let score = 1;
+    const tc = hexCenter(t.c, t.r);
+    allCities().forEach(c => {
+      const d = Math.hypot(hexCenter(c.c, c.r).x - tc.x, hexCenter(c.c, c.r).y - tc.y);
+      if (d < 200) score += (1 + (c.goods || []).length) * (200 - d) / 200;
+    });
+    if (!best || score > best.score) best = { town: t.name, score };
+  });
+  if (!best) return null; // 自網に隣接する素の町が無い＝都市化は見送り（呼び出し側で別アクションへ）
+  const tile = avail.find(x => x.color === "black") || avail[0]; // 黒（多く降る・万能シンク）優先
+  return { town: best.town, tile: tile.id };
+}
+
+function aiDoUrbanize(side) {
+  const p = P(side);
+  let tileId = p._urbanizeTile;
+  let townName = p._urbanizeTown;
+  const opp = side === "white" ? "black" : "white";
+  // 独占小ループ定石の対象(Town_8_3)が、相手の優先敷設で先に押さえられていないか確認する。
+  // Town_8_3 の陸の連結hex (6,7)/(6,8) か町本体(7,7)を相手が持っていたら独占が崩れるので、別の有用な町へ切替。
+  if (p._openedT83 && townName === "Town_8_3") {
+    const oppHolds = k => { const h = HEX[k]; return h && h.tile && (h.tile.owner === opp || (h.tile.pairOwners && h.tile.pairOwners.includes(opp))); };
+    if (oppHolds("6,7") || oppHolds("6,8") || oppHolds("7,7")) {
+      p._openedT83 = false; // ループ建設の誘導も解除
+      const ur = evalUrbanization(side);
+      const fb = (ur && ur.town) ? { town: ur.town, tile: ur.tile } : bestFallbackUrbanize(side);
+      if (fb) {
+        townName = fb.town; tileId = fb.tile;
+        log(P(side).tname + " は Town_8_3 を相手に押さえられたため " + niceName(townName) + " の都市化に変更。");
+      } else { townName = null; tileId = null; }
+    }
+  }
+  // 指定が無ければ（見送りになりそうなら）有用な町にフォールバックして、アクションを無駄にしない。
+  if (!townName || !tileId) {
+    const fb = bestFallbackUrbanize(side);
+    if (fb) { townName = fb.town; tileId = fb.tile; }
+  }
+  if (townName && tileId) {
+    const r = urbanizeTown(townName, tileId);
+    if (r.ok) {
+      if (G_URBANIZATIONS.length) G_URBANIZATIONS[G_URBANIZATIONS.length-1].side = side;
+      UI_FX.oppUrb.add(townName);
+      p._newCity = townName; // 自分が都市化した新都市＝繋ぎにいくべき相手（建設で優先）
+    }
+  }
+  p._urbanizeTown = null; p._urbanizeTile = null;
+}
+
+// aiIssue：株は「VP-3＋毎ターン費用+1」の重いコスト。建設資金が枯渇している時だけ最小限発行する。
+function aiIssue(p) {
+  if (G.turn === 1) return;        // 初手は現金10で十分、収入0
+  if (G.turn >= 7) return;         // 終盤(7,8)は発行しない：$5を残り少ないターンで回収できず、株1=最終-3VPの純損
+  if (p.shares >= 6) return;       // 株過多はVPを大きく削る（人間は3前後で戦える）
+  if (p.cash >= 8) return;         // ある程度の現金があれば配送収入で賄う → 出さない
+  // 建設資金が不足している時のみ。中盤以降は赤字スパイラル防止に収入≥費用を要求、序盤は拡張投資として許容。
+  const expenses = p.shares + p.engine;
+  if (G.turn <= 4 || p.income >= expenses) issueShare(p);
+}
+function edgeBetween(hA, hB) {
+  for (let e = 0; e < 6; e++) {
+    const nb = edgeNeighborHex(hA, e);
+    if (nb && nb.key === hB.key) return e;
+  }
+  return null;
+}
+
+function chooseTileForHex(hex, inEdge, outEdge, side) {
+  const tryOrder = ["gentle","acute","straight","coexistA","coexistB","coexistC","coexistD",
+                    "crossingA","crossingB","crossingC"];
+  for (const typeId of tryOrder) {
+    const d = TILE_DEFS[typeId];
+    if (!d || d.stock <= 0) continue;
+    const rots = validRotations(typeId).filter(rot => {
+      const exits = getExits(typeId, rot);
+      if (!exits.every(e => { const nb = edgeNeighborHex(hex, e); return nb && nb.t !== "water"; })) return false;
+      if (inEdge !== null && outEdge !== null) {
+        if (d.pairs) {
+          const rp = rotatePairs(d.pairs, rot);
+          return rp.some(pp => (pp[0]===inEdge&&pp[1]===outEdge)||(pp[0]===outEdge&&pp[1]===inEdge));
+        }
+      } else if (inEdge !== null) {
+        return exits.includes(inEdge);
+      } else if (outEdge !== null) {
+        return exits.includes(outEdge);
+      }
+      return true;
+    });
+    if (rots.length) return { typeId, rot: rots[0] };
+  }
+  return null;
+}
+
+// 既存のSimpleタイル(1線)に、新しい線 newLine を重ねられる交差/共存タイル+回転を返す。
+// 無ければ null（既存が複合タイル／辺を共有／在庫切れ／該当形状なし）。相手の線路を横断する建設に使う。
+function crossingTileFor(existTile, newLine) {
+  const d = TILE_DEFS[existTile.typeId];
+  if (!d || !d.isSimple) return null;                 // 既存がSimpleのときだけ重ねられる
+  const ep = getPairs(existTile.typeId, existTile.rotation)[0]; // 既存の1線
+  if (ep.includes(newLine[0]) || ep.includes(newLine[1])) return null; // 辺共有は不可（独立2線にならない）
+  const target = normKey([ep, newLine]);
+  for (const typeId of ["crossingA","crossingB","crossingC","coexistA","coexistB","coexistC","coexistD"]) {
+    const td = TILE_DEFS[typeId];
+    if (!td || td.stock <= 0) continue;               // 在庫切れは不可
+    for (let rot = 0; rot < 6; rot++) {
+      if (normKey(getPairs(typeId, rot)) === target) return { typeId, rot };
+    }
+  }
+  return null;
+}
+
+// BFSで起点から別の都市・町への経路を探す（自ネットワーク起点のみ）
+function findBuildPaths(startKey, side, maxLen) {
+  const visited = new Set([startKey]);
+  const queue = [{ key: startKey, path: [] }];
+  const results = [];
+  while (queue.length) {
+    const { key, path, crossInEdge } = queue.shift();
+    if (path.length > maxLen) continue;
+    const h = HEX[key];
+    // 起点が「タイルの置かれた町」の場合、その町タイルの出口がある辺からしか伸ばせない
+    //（出口の無い辺へ伸ばすと町側で線路が繋がらず未完成になる）。
+    const startTownExits = (path.length === 0 && h.t === "town" && h.tile)
+      ? getExits(h.tile.typeId, h.tile.rotation) : null;
+    for (let e = 0; e < 6; e++) {
+      // 交差で貫通中のhexは、入った辺(crossInEdge)から有効な交差/共存線になる出口辺のみ許可（曲線も可）
+      if (crossInEdge !== undefined) {
+        if (e === crossInEdge || !crossingTileFor(h.tile, [crossInEdge, e])) continue;
+      }
+      if (startTownExits && !startTownExits.includes(e)) continue;
+      const nb = edgeNeighborHex(h, e);
+      if (!nb || nb.t === "water" || visited.has(nb.key)) continue;
+      // 占有された平地：相手・自分どちらのSimple線路でも、交差/共存タイルで横断できる（直進・曲線とも可）。
+      // 自網を跨ぐのは「跨いだ方が収益が増える（最短化・新リンク）」場合のみ価値があるが、
+      // その損得判断（交差コスト$3〜6・タイル消費を含む）は planBestLink のスコア計算に委ねる。
+      if (nb.tile && nb.t !== "city" && nb.t !== "town") {
+        const inE = oppositeEdge(e); // nbのHに面する辺
+        // inE から1本でも有効な交差/共存線が引けるなら貫通候補にする（出口は処理時に決定）。
+        let canCross = false;
+        for (let e2 = 0; e2 < 6; e2++) { if (e2 !== inE && crossingTileFor(nb.tile, [inE, e2])) { canCross = true; break; } }
+        if (canCross && !visited.has(nb.key)) {
+          visited.add(nb.key);
+          queue.push({ key: nb.key, crossInEdge: inE,
+            path: [...path, { key: nb.key, fromKey: key, edgeFromPrev: e, cross: true }] });
+        }
+        continue; // 占有平地はここで処理完了（通常の空き地処理へは進めない）
+      }
+      const stepInfo = { key: nb.key, fromKey: key, edgeFromPrev: e };
+      if (nb.t === "city") {
+        // 都市は終点（通過不可）
+        if (path.length > 0 && path.length <= maxLen)
+          results.push({ dest: nb.key, isCity: true, path: [...path, stepInfo] });
+        continue;
+      }
+      if (nb.t === "town") {
+        if (nb.tile) {
+          // 既にタイルのある町＝終点候補。ただし町タイルがこちら側に出口を持つ場合のみ
+          //（出口が無ければ線路が町に繋がらず未完成になる）。
+          if (path.length > 0 && path.length <= maxLen && hexExitAt(nb, oppositeEdge(e)))
+            results.push({ dest: nb.key, isCity: false, path: [...path, stepInfo] });
+        } else {
+          // 素の町：simple＋ディスクで「貫通」して先の都市を狙う（経由でリンク数↑＝収入↑）。
+          // 行き止まりにはせず、必ず先へ続ける。
+          visited.add(nb.key);
+          queue.push({ key: nb.key, path: [...path, stepInfo] });
+        }
+        continue;
+      }
+      if (!nb.tile) {
+        visited.add(nb.key);
+        queue.push({ key: nb.key, path: [...path, stepInfo] });
+      }
+    }
+  }
+  return results;
+}
+
+/* 起点（自ネットワークに接する都市・町）の決定 */
+function computeBuildStartKeys(side, netHexes) {
+  const justUrbanized = Object.values(LOCS).filter(l => l.isNew && l.t === "city");
+  let startKeys;
+  if (netHexes.size === 0) {
+    // ネットワークなし：「隣接都市に運べる荷物が多い」順で全都市をランク付け
+    startKeys = Object.values(LOCS)
+      .filter(l => l.t === "city" || l.t === "town")
+      .map(loc => {
+        let potential = 0;
+        const goods = loc.goods || [];
+        Object.values(LOCS).filter(l2 => l2 !== loc && l2.t === "city").forEach(dst => {
+          goods.forEach(g => { if (g === dst.color) potential += 2; });
+          (dst.goods||[]).forEach(g => { if (g === (loc.t==="city"?loc.color:null)) potential += 1; });
+        });
+        potential += goods.length;
+        return { key: loc.key, score: potential };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map(x => x.key);
+    justUrbanized.forEach(l => { if (!startKeys.includes(l.key)) startKeys.unshift(l.key); });
+  } else {
+    const netLocs = new Set();
+    // 自タイルhexと隣接している都市・町を起点にする
+    Object.values(LOCS).forEach(loc => {
+      if (loc.t !== "city" && loc.t !== "town") return;
+      for (let e = 0; e < 6; e++) {
+        const nb = edgeNeighborHex(loc, e);
+        if (nb && netHexes.has(nb.key)) { netLocs.add(loc.key); return; }
+      }
+    });
+    // 都市に直接隣接している自タイルがある場合、その都市を起点に追加
+    netHexes.forEach(hk => {
+      const h = HEX[hk]; if (!h) return;
+      for (let e = 0; e < 6; e++) {
+        const nb = edgeNeighborHex(h, e);
+        if (nb && (nb.t === "city" || nb.t === "town")) {
+          if (hexExitAt(h, e)) netLocs.add(nb.key);
+        }
+      }
+    });
+    startKeys = [...netLocs];
+    justUrbanized.forEach(l => { if (!startKeys.includes(l.key)) startKeys.unshift(l.key); });
+    // 自網から離れた都市も起点に追加：都市は単独で線路の起点にできる（都市接続＝合法）。
+    // これで「収入が出る新しい枝」や「終盤の線路VP」を、既存網と繋がっていなくても敷ける。
+    // 接続済み起点は connBonus で優遇されるので、序盤に無駄な飛び地が乱立することはない。
+    Object.values(LOCS).forEach(l => {
+      if (l.t === "city" && !startKeys.includes(l.key)) startKeys.push(l.key);
+    });
+    if (!startKeys.length) {
+      startKeys = Object.values(LOCS)
+        .filter(l => l.t === "city" || l.t === "town")
+        .sort((a, b) => (b.goods||[]).length - (a.goods||[]).length)
+        .slice(0, 5).map(l => l.key);
+    }
+  }
+  return startKeys;
+}
+
+/* 経路を都市・町（節点）で区切り、各区間を1本の自分所有リンクとした仮想接続群を返す。
+   町を貫通する経路は start→町→…→dest が複数リンクになり、収入評価に正しく反映される。 */
+function buildVirtualLinks(startLoc, path, side) {
+  const vlinks = [];
+  let segStart = startLoc.name;
+  let segHexes = [];
+  for (const step of path) {
+    const h = HEX[step.key];
+    if (!h) continue;
+    if (h.t === "land") { segHexes.push(step.key); continue; }
+    // 都市・町＝節点：ここで1区間を確定（双方向リンク）
+    vlinks.push({ from: segStart, to: h.name, hexPath: segHexes.slice(), _owner: side });
+    vlinks.push({ from: h.name, to: segStart, hexPath: segHexes.slice(), _owner: side });
+    segStart = h.name; segHexes = [];
+  }
+  return vlinks;
+}
+
+/* 独占小ループ定石の対象都市（建設フェーズで三角を優先的に閉じる） */
+const OPENING_LOOP_CITIES = new Set(["Boston", "Providence", "Town_8_3"]);
+
+/* 残り予算 maxTiles 以内で、最も価値の高い1リンクを探す。
+   「この線路を引いたら配送収入がいくら増えるか（連鎖込み）」で評価する。 */
+function planBestLink(p, maxTiles, avoid, preferStart, outList) {
+  const side = p.side;
+  const opp = side === "white" ? "black" : "white";
+  const netHexes = myNetworkHexes(side);
+  const oppNetHexes = myNetworkHexes(opp);
+  const startKeys = computeBuildStartKeys(side, netHexes);
+
+  const baseConns = buildConnectionGraph();
+  const baseStats = realizableStatsFromConns(side, p.engine, baseConns);
+  const baseInc = baseStats.income;
+  const baseIncLoco = p.engine < 6 ? realizableIncomeFromConns(side, p.engine + 1, baseConns) : baseInc;
+  const basePotential = realizablePotentialFromConns(side, baseConns);
+  // 残りターン数（献上回避の恩恵も将来throughputも毎ターン繰り返すため、残りが多いほど価値が高い）
+  const turnsLeft = Math.max(1, 9 - G.turn);
+
+  // 自前ネットワークの連結成分（環状線=ループ検出用）。
+  // 自分所有リンクで繋がるノードに同じIDを振り、「既に繋がっている都市へ別経路で繋ぐ＝ループを閉じる」を判定する。
+  // ownAdj（自前隣接）は最短経路計算にも再利用する。
+  const ownAdj = new Map();
+  for (const c of baseConns) {
+    if (!linkOwnedBy(c, side)) continue;
+    if (!ownAdj.has(c.from)) ownAdj.set(c.from, []);
+    ownAdj.get(c.from).push(c.to);
+  }
+  const ownComp = new Map();
+  {
+    let cid = 0;
+    for (const node of ownAdj.keys()) {
+      if (ownComp.has(node)) continue;
+      const q = [node]; ownComp.set(node, cid);
+      while (q.length) {
+        const at = q.shift();
+        (ownAdj.get(at) || []).forEach(to => { if (!ownComp.has(to)) { ownComp.set(to, cid); q.push(to); } });
+      }
+      cid++;
+    }
+  }
+  // 自前リンクでの最短経路リンク数（環状線が“遠回りの選択肢”を増やすか判定するため）
+  function shortestOwnDist(fromName, toName) {
+    if (fromName === toName) return 0;
+    const seen = new Set([fromName]);
+    let frontier = [fromName], dist = 0;
+    while (frontier.length) {
+      dist++;
+      const next = [];
+      for (const at of frontier) {
+        for (const to of (ownAdj.get(at) || [])) {
+          if (to === toName) return dist;
+          if (!seen.has(to)) { seen.add(to); next.push(to); }
+        }
+      }
+      frontier = next;
+    }
+    return Infinity;
+  }
+  // 領域の評価用：全都市・町ノードのリスト（候補ごとに作り直さないよう1回だけ）
+  const nodeList = Object.values(LOCS).filter(l => l.t === "city" || l.t === "town");
+
+  let bestCandidate = null, bestScore = -Infinity;
+
+  for (const startKey of startKeys) {
+    const paths = findBuildPaths(startKey, side, maxTiles);
+    for (const { dest, isCity, path } of paths) {
+      if (avoid && avoid.has(startKey + ">" + dest)) continue; // 直前に敷設失敗した経路は除外
+      const startLoc = HEX[startKey];
+      const destLoc  = HEX[dest];
+      if (!startLoc || !destLoc) continue;
+      // 起点が素の町（タイルなし）の場合、最初の線路が宙ぶらりんになるため不可。
+      if (startLoc.t === "town" && !startLoc.tile) continue;
+
+      // 敷設が必要なマス：平地＋「貫通する素の町」（町はsimple＋ディスクで貫通）。
+      // 敷設が必要なステップ：空き平地・貫通町(タイルなし)＋ 交差で貫通する占有平地(s.cross)。
+      const buildSteps = path.filter(s => { const h=HEX[s.key]; if(!h) return false;
+        return s.cross ? true : ((h.t==="land" || h.t==="town") && !h.tile); });
+      const tilesNeeded = buildSteps.length;
+      if (tilesNeeded === 0 || tilesNeeded > maxTiles) continue;
+      // 貫通町は町ディスクを消費する。在庫を超えるなら不可。
+      const townSteps = buildSteps.filter(s => !s.cross && HEX[s.key].t === "town").length;
+      if (townSteps > TOWN_DISK_STOCK) continue;
+
+      const actualCost = buildSteps.reduce((sum, s) => {
+        const h = HEX[s.key];
+        if (s.cross) return sum + (h.terrain === "mountain" ? 6 : 3); // 交差/共存の重ね置き（replace ≒ $3）
+        if (h.t === "town") return sum + 3;                       // simple＋ディスク貫通町＝$1+出口2
+        return sum + (h.terrain === "mountain" ? 4 : 2);
+      }, 0);
+      if (actualCost > p.cash) continue;
+      if (p.income < 0 && (p.cash - actualCost) + p.income - (p.shares + p.engine) < -5) continue;
+
+      // この経路を敷くと、町を節点として start→…→dest が複数リンクで繋がる。
+      // 節点（都市・貫通町）ごとに区切って正確な仮想リンク群を作り、収入増を測る。
+      const conns2 = baseConns.concat(buildVirtualLinks(startLoc, path, side));
+
+      const stats2 = realizableStatsFromConns(side, p.engine, conns2);
+      const incNow  = stats2.income;
+      const gainNow = incNow - baseInc;
+      const incLoco = p.engine < 6 ? realizableIncomeFromConns(side, p.engine + 1, conns2) : incNow;
+      const gainLoco = (incLoco - baseIncLoco);
+      // ②a 献上回避バイパス：このリンクで「相手所有リンクに頼る配送」が減る分を評価。
+      // 相手への献上が止まる＝自分が+1取り返し かつ 相手が-1 の二重効果が毎ターン続くため、
+      // 残りターン数を掛けて recurring value として加点する（拡張の阻害にならないよう減点はしない）。
+      const bypass = Math.max(0, baseStats.oppForeign - stats2.oppForeign);
+      // ②-lite 将来throughput：このリンクが幹線として今後増やす配送ポテンシャル（機関車6・配送無制限）。
+      const potGain = Math.max(0, realizablePotentialFromConns(side, conns2) - basePotential);
+      // 環状線：既に自網で繋がっている都市へ別経路で繋ぐ＝ループを閉じる。
+      // 経路長の選択肢が増え（engineに合わせた遠回りが可能になり）、将来の配送収入が上がる。
+      // 最優先ではないので控えめ＆上限付き。後半まで効くので残りターンで重み付け。都市で閉じる輪を重視。
+      const startName = startLoc.name, destName = destLoc.name;
+      // ループ判定：既に同じ自前成分にある＝閉路。ただし“並行線路（同じ経路の二重引き）”は無意味なので、
+      // 新経路が既存の最短自前経路より長いときだけ「有効なループ（遠回りの選択肢が増える）」とみなす。
+      const sameComp = ownComp.has(startName) && ownComp.get(startName) === ownComp.get(destName);
+      let closesLoop = false;
+      if (sameComp) {
+        // 新たに敷く経路のリンク数＝経由する都市・町ノード数（buildVirtualLinks の区切りと一致）
+        const newPathLen = path.filter(s => { const h = HEX[s.key]; return h && (h.t === "city" || h.t === "town"); }).length;
+        closesLoop = newPathLen > shortestOwnDist(startName, destName);
+      }
+
+      let expansion = isCity ? 4 : 2;
+      if (destLoc.isNew) expansion += 3;
+      if (isCity) expansion += Math.min((destLoc.goods||[]).length, 3);
+
+      let oppDanger = 0;
+      buildSteps.forEach(s => {
+        for (let e = 0; e < 6; e++) {
+          const nb = edgeNeighborHex(HEX[s.key], e);
+          if (nb && oppNetHexes.has(nb.key)) { oppDanger++; break; }
+        }
+      });
+      // 相手妨害ボーナス：相手網の“狭路（pinch point）”を自分が先に占有すると、
+      // 相手の環状線が閉じられなくなり、迂回を強いて侵入も阻める（人間が嫌がる手）。
+      // 建設マスが相手網hexに2つ以上隣接していれば choke point とみなす。残りターン比例・上限付き。
+      let blockBonus = 0;
+      buildSteps.forEach(s => {
+        let oppAdj = 0;
+        for (let e = 0; e < 6; e++) {
+          const nb = edgeNeighborHex(HEX[s.key], e);
+          if (nb && oppNetHexes.has(nb.key)) oppAdj++;
+        }
+        if (oppAdj >= 2) blockBonus += 1;
+      });
+      blockBonus = Math.min(blockBonus * 2.0 * Math.min(turnsLeft, 6) / 6, 10);
+
+      // 接続ボーナス：起点が既存の自前ネットワークに繋がる建設を優遇（連結バックボーン＝連鎖配送・環状線の土台）。
+      // 網がある状態での“飛び地建設”は中程度に減点し、まず1本の背骨を伸ばし切らせる（バラバラ建設の抑制）。
+      // 減点は中程度なので、別の場所の収入が明確に大きければ飛んでよい（箱詰め回避）。
+      // 新都市接続・環状線・終盤VP は別ボーナスで上乗せされるので、必要な飛び地は引き続き選ばれる。
+      const startConnected = ownComp.has(startName);
+      const connBonus = startConnected ? 6 : (ownComp.size > 0 ? -5 : 0);
+      // ★連続性：直前に敷いたリンクの到達点(preferStart)から続けて敷く＝1本の回廊を端から端まで
+      // 連続して伸ばす建設を優遇する。間を空けると相手に妨害の隙を与えるため、まず繋げ切らせる（人間戦略）。
+      const continueBonus = (preferStart && startName === preferStart) ? 9 : 0;
+      // 効率重視：同じ収入・接続なら少ない枚数を強く優先する。
+      // タイルは予算（毎ターン3〜4枚）と現金を消費するので、無駄に長く敷くと
+      // 他の有用なリンクを敷く余地を失う。拡張価値は「リンク単位」で expansion に持たせ、
+      // 枚数・コストは純粋な減点にする（長い経路ほど不利）。
+      const tilePenalty = tilesNeeded * 1.6;
+      const costPenalty = actualCost * 0.3;
+      // ★先手番補正：このターン先に動く側は手の内を晒すため、後手に便乗・妨害されやすい。
+      //   そこで先手のときは「献上に頼らない自己完結の長距離背骨」への投資を強める（後手時は等倍＝従来通り）。
+      const leadMul = (turnOrder()[0] === side) ? 1.4 : 1.0;
+      // 献上回避の繰り返し価値（残りターン数比例、上限あり）。最終ターン付近では恩恵が無いので自然に小さくなる。
+      const bypassBonus = Math.min(bypass * turnsLeft * 1.2, 18) * leadMul;
+      // 将来throughputの価値：残りターンが多いほど幹線投資が活きる。序盤を厚く、終盤は薄く。上限あり。
+      // 係数・上限を引き上げ、序盤の背骨投資（5-6リンク幹線の先回り建設）を後押しする。
+      const potentialBonus = Math.min(potGain * 4 * Math.min(turnsLeft, 7) / 7, 30) * leadMul;
+      // 環状線ボーナス：控えめ（最優先ではない／つながればラッキー程度）。都市で閉じる輪は満額、町は半分。
+      const loopBonus = closesLoop ? Math.min(2.0 * turnsLeft, 12) * (isCity ? 1 : 0.5) : 0;
+      // 領域の評価：接続先周辺が密集・高回転・未確保なら加点。ただし“収入の補助（タイブレーカー）”に留め、
+      // 実収入のある建設(gainNow)を上書きしないよう控えめ＆低上限にする（序盤の収入を犠牲にしない）。
+      const territoryBonus = Math.min(regionQuality(destLoc, nodeList, netHexes, oppNetHexes) * 1.0 * Math.min(turnsLeft, 7) / 7, 7);
+      // 終盤の線路VP：タイルはそれ自体がVP（plain=1点／町=出口数ぶん）。収入が伸びない終盤は、
+      // 余った現金を線路VPに替える価値がある。序盤は厳禁（現金・予算は収入建設に使う）。
+      // 最終2ターンのみ・最終ターンを最も厚く。1VP≈4スコア（収入1=12スコア=3VP 換算）。
+      const lateVpBonus = turnsLeft <= 2 ? (tilesNeeded + townSteps) * 4 * (3 - turnsLeft) / 2 : 0;
+      // 機関車先読みボーナス：機関車6到達時の収入増を計算し、現在との差分を将来価値として加点。
+      // 残りターンから機関車6到達に必要なターンを引いた期間だけ恩恵がある。
+      const turnsToMax = Math.max(0, 6 - p.engine);
+      const gainAt6 = p.engine < 6
+        ? realizableIncomeFromConns(side, 6, conns2) - realizableIncomeFromConns(side, 6, baseConns)
+        : gainNow;
+      const effectiveTurns = Math.max(0, turnsLeft - turnsToMax);
+      const forwardBonus = gainAt6 > gainNow
+        ? Math.min((gainAt6 - gainNow) * effectiveTurns * 1.2, 28) : 0;
+      // 長距離ルートボーナス：完成リンク数が5以上になる経路を優遇。
+      // プレイヤーのように「5〜6リンクになる線路を先に確保する」思考を模倣する。
+      const routeLinks = buildVirtualLinks(startLoc, path, side).length;
+      const longRouteBonus = (routeLinks >= 5 ? (routeLinks - 4) * 5 * Math.min(turnsLeft, 6) / 6 : 0) * leadMul;
+      // 独占小ループ定石（序盤）：Town_8_3 都市化後、序盤(≤3T)の間 Boston-Providence-Town_8_3 の三角を閉じにいく。
+      // 孤立した新都市 Town_8_3 を繋ぐ建設を最優先(+15)、Boston⇔Providence の辺は次点(+8)。
+      // Town_8_3 の陸の隣は (6,7)/(6,8) の2つだけ＝スポークは最大2本なので、過剰建設にならず三角が閉じる。
+      // 閉じる辺（即収入なし）が収入建設に負けて未完成になるのを防ぐため、強めに加点する。
+      const openingActive = p._openedT83 && G.turn <= 3 && LOCS["Town_8_3"] && LOCS["Town_8_3"].isNew;
+      let openingLoopBonus = 0;
+      if (openingActive) {
+        if (startName === "Town_8_3" || destName === "Town_8_3") openingLoopBonus = 25; // スポーク（2本とも必ず引く）
+        else if (OPENING_LOOP_CITIES.has(startName) && OPENING_LOOP_CITIES.has(destName)) openingLoopBonus = 14; // Boston⇔Providence の閉じる辺
+      }
+      // 都市化したばかりの自分の新都市にまだ繋がっていなければ、繋ぐ建設を優先（放置＝相手に塩を送る/無駄になるのを防ぐ）。
+      const newCityBonus = (p._newCity && !ownComp.has(p._newCity) && (startName === p._newCity || destName === p._newCity)) ? 15 : 0;
+
+      const score = gainNow * 12 + gainLoco * 3 + expansion + connBonus + continueBonus + bypassBonus + potentialBonus + loopBonus + territoryBonus + lateVpBonus + openingLoopBonus + newCityBonus + forwardBonus + longRouteBonus + blockBonus
+                    - oppDanger * 2 - tilePenalty - costPenalty;
+
+      const candObj = { startKey, dest, destName, path, actualCost, gainNow, bypass, loop: closesLoop, score };
+      if (outList) outList.push(candObj);           // ロールアウト用：全候補を収集
+      if (score > bestScore) { bestScore = score; bestCandidate = candObj; }
+    }
+  }
+  return bestCandidate;
+}
+
+/* 1リンク分のタイルを敷設する。完成できなければ自分の分だけ巻き戻して0を返す。
+   平地は線路タイル、貫通する素の町は simple＋ディスク（placeTile が自動付与）で敷く。 */
+function placeLink(p, cand, maxTiles) {
+  const side = p.side;
+  const { path } = cand;
+  const buildSteps = path.filter(s => { const h=HEX[s.key]; if(!h) return false;
+    return s.cross ? true : ((h.t==="land" || h.t==="town") && !h.tile); });
+  let placed = 0;
+  for (const step of buildSteps) {
+    if (placed >= maxTiles) break;
+    const h = HEX[step.key];
+    if (!h) break;
+    if (step.cross) {
+      // 相手のSimple線路を交差/共存タイルで横断する（出口辺は次ステップ方向＝曲がっても可）
+      if (!h.tile) break;                                  // 状況が変わっていたら中止
+      const inE = oppositeEdge(step.edgeFromPrev);
+      const stepIdx = path.indexOf(step);
+      const nextStep = stepIdx >= 0 ? path[stepIdx + 1] : null;
+      const outE = nextStep ? edgeBetween(h, HEX[nextStep.key]) : oppositeEdge(inE);
+      const cross = crossingTileFor(h.tile, [inE, outE]);
+      if (!cross) break;
+      if (p.cash < (h.terrain === "mountain" ? 6 : 3)) break;
+      const r = placeTile(side, step.key, cross.typeId, cross.rot);
+      if (!r.ok) break;
+      placed++;
+      continue;
+    }
+    if (h.tile) continue;
+    const tileCostMin = h.t === "town" ? 3 : (h.terrain === "mountain" ? 4 : 2);
+    if (p.cash < tileCostMin) break;
+    const inEdge = step.edgeFromPrev !== undefined ? oppositeEdge(step.edgeFromPrev) : null;
+    const stepIdx = path.indexOf(step);
+    const nextStep = stepIdx >= 0 ? path[stepIdx + 1] : null;
+    const outEdge = nextStep ? edgeBetween(h, HEX[nextStep.key]) : null;
+    // 平地も貫通町も in/out 2辺を結ぶ simple タイルを選ぶ（町では placeTile がディスクを足す）
+    const choice = chooseTileForHex(h, inEdge, outEdge, side);
+    if (!choice) break;
+    const r = placeTile(side, step.key, choice.typeId, choice.rot);
+    if (!r.ok) break;
+    placed++;
+  }
+  // リンクを完成できなかった（端部が宙ぶらりん）→ このリンク分だけ巻き戻す
+  if (placed < buildSteps.length) {
+    for (let i = 0; i < placed; i++) undoLastPlacement(side);
+    return 0;
+  }
+  // 安全網：このリンク敷設後に未完成端部・都市未接続が生じていないか単体検証する。
+  // 問題があればこのリンクだけ巻き戻し、これまでに完成した他リンクは温存する
+  //（バッチ全undoでターンの敷設が丸ごと消えるのを防ぐ）。
+  if (placed > 0 && checkBuildValid(side).length > 0) {
+    for (let i = 0; i < placed; i++) undoLastPlacement(side);
+    return 0;
+  }
+  return placed;
+}
+
+/* ====== 先読みロールアウト（数手先シミュレーション） ====== */
+// 盤面・プレイヤー・在庫の可変部分をスナップショット／復元する。
+// ロールアウトはこの上で本物の関数を走らせ、終わったら完全に元へ戻す。
+function simSnapshot() {
+  const snap = { hex:{}, players:{}, stock:{}, disk:TOWN_DISK_STOCK, G:{} };
+  for (const k in HEX) {
+    const h = HEX[k];
+    snap.hex[k] = { t:h.t, color:h.color,
+      nums: h.nums ? h.nums.slice() : h.nums,
+      numColors: h.numColors ? h.numColors.slice() : h.numColors,
+      tile: h.tile ? JSON.parse(JSON.stringify(h.tile)) : null,
+      goods: h.goods ? h.goods.slice() : [],
+      isNew: h.isNew, newCityId: h.newCityId };
+  }
+  ["white","black"].forEach(s => { snap.players[s] = Object.assign({}, G.players[s]); });
+  for (const id in TILE_DEFS) if (TILE_DEFS[id].stock !== undefined) snap.stock[id] = TILE_DEFS[id].stock;
+  snap.G = { turn:G.turn, idx:G.idx, moveRound:G.moveRound, order:G.order.slice(), actions:Object.assign({},G.actions) };
+  // ★敷設の取り消し履歴を退避し、シミュレーション用に空にする。
+  //   これを忘れるとシム中の敷設記録が本番に残り、本番のundoが暴走して線路が未完成になる。
+  snap.gp = G_PLACEMENTS; snap.gu = G_URBANIZATIONS;
+  G_PLACEMENTS = []; G_URBANIZATIONS = [];
+  return snap;
+}
+function simRestore(snap) {
+  for (const k in snap.hex) {
+    const h = HEX[k], s = snap.hex[k];
+    h.t=s.t; h.color=s.color; h.nums=s.nums; h.numColors=s.numColors;
+    h.tile = s.tile ? JSON.parse(JSON.stringify(s.tile)) : null; // 参照共有を避けて深く戻す
+    h.goods = s.goods.slice(); h.isNew=s.isNew; h.newCityId=s.newCityId;
+  }
+  ["white","black"].forEach(si => { const p=G.players[si], sp=snap.players[si]; for (const key in sp) p[key]=sp[key]; });
+  for (const id in snap.stock) TILE_DEFS[id].stock = snap.stock[id];
+  TOWN_DISK_STOCK = snap.disk;
+  G.turn=snap.G.turn; G.idx=snap.G.idx; G.moveRound=snap.G.moveRound; G.order=snap.G.order; G.actions=snap.G.actions;
+  // ★退避していた本番の取り消し履歴を元に戻す（シム中の記録は破棄）。
+  G_PLACEMENTS = snap.gp; G_URBANIZATIONS = snap.gu;
+}
+// シミュレーション用の貪欲配送（今の機関車で純益が高い順に最大3配送）。
+function simDeliver(p) {
+  for (let d=0; d<3; d++) {
+    const all = deliveriesFrom(p.side, p.engine).filter(c => c.ownInc > 0);
+    if (!all.length) break;
+    all.sort((a,b)=>(b.ownInc-(b.totalLen-b.ownInc)*0.5)-(a.ownInc-(a.totalLen-a.ownInc)*0.5));
+    const c = all[0];
+    const src = LOCS[c.srcName];
+    if (src && src.goods) src.goods.splice(c.gi, 1);          // キューブ消費
+    c.links.forEach(l => { if (l.owner) P(l.owner).income += 1; }); // 各リンク所有者へ+1
+  }
+}
+// 1ターン進める（両プレイヤーを貪欲AIとして）。機関車は毎ターン6まで近づける（双方対称）。
+function simTurn() {
+  const order = turnOrder();
+  order.forEach(s => { const p=P(s); if (p.engine < 6) p.engine++; });
+  order.forEach(s => { const p=P(s); p.tilesThisTurn=0; try { aiBuild(p); } catch(e){} });
+  order.forEach(s => simDeliver(P(s)));
+  order.forEach(s => { const p=P(s); p.cash += p.income;
+    let red=0; if(p.income>49)red=10; else if(p.income>=41)red=8; else if(p.income>=31)red=6;
+    else if(p.income>=21)red=4; else if(p.income>=11)red=2; p.income-=red; });
+  G.turn++;
+}
+// トップK候補それぞれを「最初の1リンク」として置き、数ターン先までシミュレートし、
+// 自分VP−相手VP が最大の候補を返す。時間超過・エラー時は null（＝通常貪欲にフォールバック）。
+function rolloutChooseFirstLink(p) {
+  const budget = buildBudget(p);
+  const list = [];
+  planBestLink(p, budget, null, p._buildFrontier || null, list); // 候補を全部collectorに集める
+  if (list.length <= 1) return null;
+  list.sort((a,b)=>b.score-a.score);
+  const K = Math.min(3, list.length);
+  const opp = p.side === "white" ? "black" : "white";
+  const horizon = Math.min(3, 9 - G.turn); // 数手先（最大3ターン）
+  if (horizon <= 0) return null;
+  const t0 = Date.now();
+  let best=null, bestVal=-Infinity;
+  for (let i=0; i<K; i++) {
+    if (Date.now() - t0 > 1200) break; // 時間ガード（低スペック端末でのフリーズ防止）
+    const cand = list[i];
+    const snap = simSnapshot();
+    SIM_MODE = true;
+    let val;
+    try {
+      const placed = placeLink(p, cand, budget);            // この候補を最初に敷く
+      for (let t=0; t<horizon && G.turn<=8; t++) simTurn();  // 残りをシミュレート
+      // 「現在の収入」＋「数手先のVP差」の同時評価：未来予測に偏って今期収入を捨てないよう、
+      // 即時の配送増(gainNow)を明示的に上乗せする（present weight）。
+      val = (vp(p.side).total - vp(opp).total) + cand.gainNow * 2.0;
+      if (placed === 0) val -= 1000;                        // 敷けない候補は強く減点
+    } catch(e) { val = cand.score; }
+    SIM_MODE = false;
+    simRestore(snap);
+    if (val > bestVal) { bestVal = val; best = cand; }
+  }
+  return best;
+}
+
+function aiBuild(p) {
+  const side = p.side;
+  const budget = buildBudget(p);
+  let remaining = budget;
+  let totalPlaced = 0, linksBuilt = 0;
+  const fxBefore = myNetworkHexes(side); // 演出用：建設前のCPU網（差分で今ターン敷設を抽出）
+
+  // 予算が尽きるまで「1リンク完成 → ネットワーク再評価 → 次のリンク」を繰り返す。
+  // 各リンク完成後に網が広がるので、1ターンで幹線を継ぎ足して伸ばせる。
+  const avoid = new Set(); // 敷設に失敗した経路（再プランで除外）
+  let attempts = 0;
+  // ★連続性：前ターンに伸ばしていた回廊の先端(frontier)から続けて敷く。ターンを跨いで1本の回廊を伸ばし切らせる。
+  let preferStart = p._buildFrontier || null;
+  // 先読み：最初のリンクをロールアウトで選ぶ（本番のみ。失敗時は通常貪欲にフォールバック）。
+  let forcedFirst = null;
+  if (!SIM_MODE) { try { forcedFirst = rolloutChooseFirstLink(p); } catch(e) { forcedFirst = null; } }
+  while (remaining >= 1 && p.cash >= 2) {
+    if (++attempts > 8) break; // 失敗の試行が嵩んだら打ち切る（thrash防止）
+    let cand;
+    if (forcedFirst) { cand = forcedFirst; forcedFirst = null; } // ロールアウトの最善手を最初に置く
+    else cand = planBestLink(p, remaining, avoid, preferStart);
+    if (!cand) break;
+    // 2リンク目以降は、正の価値がある時だけ続ける（無駄打ち防止）。
+    // 1リンク目は従来通り最善手を必ず試す（序盤の布石を確保）。
+    if (linksBuilt > 0 && cand.score <= 0) break;
+
+    const placed = placeLink(p, cand, remaining);
+    if (placed === 0) {
+      // この経路は敷設できなかった（未完成等）。除外して次善手を試す（建設を止めない）。
+      avoid.add(cand.startKey + ">" + cand.dest);
+      continue;
+    }
+    // 目的ログ
+    const sName = HEX[cand.startKey] ? niceName(HEX[cand.startKey].name) : "?";
+    const dEnd = cand.path[cand.path.length - 1];
+    const dName = dEnd && HEX[dEnd.key] ? niceName(HEX[dEnd.key].name) : "?";
+    const goalNote = cand.loop ? "（環状線" + (cand.gainNow > 0 ? "＋配送+" + cand.gainNow : "") + "見込み）"
+                   : cand.bypass > 0 ? "（献上回避＋配送+" + cand.gainNow + "見込み）"
+                   : cand.gainNow > 0 ? "（配送+" + cand.gainNow + "見込み）" : "（網拡張）";
+    log(p.tname + " の狙い: " + sName + " → " + dName + " を接続" + goalNote);
+    totalPlaced += placed;
+    remaining -= placed;
+    linksBuilt++;
+    // 到達点を次リンクのfrontierにして、回廊を端から端まで連続して伸ばす。
+    preferStart = cand.destName || preferStart;
+  }
+  // 次ターンも同じ回廊を続けられるよう先端を保存。何も敷けなかったら回廊をリセット。
+  p._buildFrontier = totalPlaced > 0 ? preferStart : null;
+
+  const errors = checkBuildValid(side);
+  if (errors.length) {
+    undoAllPlacements(side);
+    log(p.tname + " の敷設を取り消しました（" + errors[0] + "）。");
+  } else if (totalPlaced > 0) {
+    log(p.tname + " が " + totalPlaced + " 枚の線路を敷設しました（" + linksBuilt + "リンク）。");
+  } else {
+    log(p.tname + " は敷設をスキップしました。");
+  }
+  if (!SIM_MODE) fxSnapshotOppTiles(side, fxBefore); // 演出用：CPUの今ターン敷設hexを記録
+}
+
+// 指定エンジンで、上位 n 配送（同一キューブは1回）の自己収入合計。機関車アップグレード判断に使う。
+function bestTurnIncome(side, engine, n) {
+  if (n <= 0) return 0;
+  const cands = deliveriesFrom(side, engine).filter(c => c.ownInc > 0).sort((a, b) => b.ownInc - a.ownInc);
+  const used = new Set();
+  let total = 0, count = 0;
+  for (const c of cands) {
+    const k = c.srcName + ":" + c.gi;
+    if (used.has(k)) continue;
+    used.add(k); total += c.ownInc;
+    if (++count >= n) break;
+  }
+  return total;
+}
+
+function aiMove(p) {
+  const all = deliveriesFrom(p.side, p.engine);
+  // 全リンクが自分所有（未所有=直接隣接は中立として許容）
+  const selfOnly = all.filter(c => c.links.every(link => !link.owner || link.owner === p.side));
+
+  // 相手が運べる（＝放置すると相手に運ばれる）荷物を把握する。
+  // 同条件なら、相手も運べる荷物を先に運んで奪う（収益ゲームなので先取りが効率的）。
+  const opp = p.side === "white" ? "black" : "white";
+  const oppP = P(opp);
+  const oppNow = deliverableCubeKeys(opp, oppP.engine);                         // 相手が今すぐ運べる荷物
+  const oppUp  = oppP.engine < 6 ? deliverableCubeKeys(opp, oppP.engine + 1) : new Set(); // +1で運べる荷物
+  // 妨害強化：相手も運べる荷物は積極的に先取りする（多少の純益を犠牲にしても奪う）。
+  function contestBonus(c) {
+    const k = c.srcName + ":" + c.gi;
+    if (oppNow.has(k)) return 1.0;   // 相手が現機関車で運べる → 奪う価値大
+    if (oppUp.has(k))  return 0.5;   // 相手が機関車+1で運べる → 奪う価値中
+    return 0;
+  }
+  const isContested = c => oppNow.has(c.srcName + ":" + c.gi);  // 相手が今すぐ奪える荷物か
+  // スコア = 点差ベースの純益＋競合ボーナス。
+  // 勝敗は「自分の収入−相手の収入」で決まるので、献上リンク（相手所有＝相手に永続+1収入）は
+  // 等倍より重く（×1.2）減点する。中立リンク（無所有）は誰の収入にもならないので減点しない。
+  // 旧実装は献上と中立をまとめて×0.5にしており、献上付き配送を過大評価していた。
+  function moveScore(c) {
+    const oppLinks = c.links.filter(l => l.owner && l.owner !== p.side).length;
+    return (c.ownInc - oppLinks * 1.2) + contestBonus(c);
+  }
+
+  // ① 収入逓減ライン回避＋機関車繰り越し（全ラウンド共通の機関車判断）。
+  // 人間戦略：逓減ライン(11/21/31/41/50)を跨ぐ配送はその手取りが目減りするので、
+  // その手を機関車強化(永続+1)に振り替え、荷物は次ラウンド/次ターンに高機関車で運ぶ。
+  // engine+1は将来ターンで5-6リンク配送を解禁する永続価値(durable)を持つため、
+  // 「今ラウンドの配送net」より「機関車netＵＰ＋将来価値」が上回るなら上げる。
+  // ただし相手に今すぐ奪われる荷物(contested)は死守＝上げずに運ぶ。
+  if (!p.engineUpgraded && p.engine < 6) {
+    const movesLeft = 4 - G.moveRound;                       // round1→3手, round2→2手, round3→1手
+    // この手を配送に使った場合 vs 機関車強化(この手を消費)に使った場合の「ターン終了時の手取り(net)」
+    const netNow = netIncome(p.income + bestTurnIncome(p.side, p.engine, movesLeft));
+    const netUp  = netIncome(p.income + bestTurnIncome(p.side, p.engine + 1, Math.max(0, movesLeft - 1)));
+    // 機関車+1の永続価値：1ターンあたりの追加throughput(engine+1で増える輸送能力)を残りターン分。
+    const turnsLeft = Math.max(0, 8 - G.turn);               // 今ターンを除く残りターン数
+    const capacityGain = bestTurnIncome(p.side, p.engine + 1, 3) - bestTurnIncome(p.side, p.engine, 3);
+    const durable = Math.max(0, capacityGain) * Math.min(turnsLeft, 4) * 0.5;
+    // 今ラウンドの最良の自前配送が相手に奪われるなら、上げずに運んで死守する。
+    const bestSelf = all.filter(c => c.ownInc > 0).sort((a, b) => moveScore(b) - moveScore(a))[0];
+    const mustDeliver = bestSelf && isContested(bestSelf);
+    if (!mustDeliver && netUp + durable > netNow) {
+      p.engine++; p.engineUpgraded = true;
+      log(p.tname + " は逓減ラインを跨ぐ配送を避け機関車を繰り越し（→" + p.engine
+        + "｜今期net " + netNow + " vs 強化net " + netUp + "＋将来" + Math.round(durable) + "）。");
+      return;
+    }
+  }
+
+  // 自分の収入になる配送のみ対象にする。
+  // selfOnly（全リンク自分所有）が無ければ、せめて ownInc>0（自分も収入を得る）配送に限定。
+  // 相手の線路を経由しても自分の収入(ownInc)が増えるなら候補に含める。
+  // selfOnly（全部自分所有）に限定せず、ownInc>0 の全配送から
+  // 純益（自分の収入 − 相手に渡る収入×0.5）が最大のものを選ぶ（下のsortで評価）。
+  const pool = all.filter(c => c.ownInc > 0);
+  if (!pool.length) {
+    // 自前で運べる商品が無い（相手リンクのみ＝運ぶと相手のVPだけが上がる）。
+    // → 運ばず、機関車を上げられるなら上げる（将来の収入）。無理ならパス。
+    if (p.engine < 6 && !p.engineUpgraded) {
+      p.engine++; p.engineUpgraded = true;
+      log(p.tname + " は自前で運べる商品が無いため機関車をアップグレード（→" + p.engine + "）。");
+    } else {
+      log(p.tname + " は自前で運べる商品が無いため輸送をパスしました。");
+    }
+    return;
+  }
+
+  // ② 収入逓減の閾値回避：最終ラウンド(3回目)は「逓減後の手取り」が最大になる配送を選ぶ。
+  // 配送しても手取りが増えない（11/21/31/41/50ちょうどに乗る等で収入が無駄になる）なら、
+  // 運ばず機関車を上げる/パスする。中間ラウンドは最終位置が未確定なので通常評価。
+  if (G.moveRound === 3) {
+    const netScore = c => netIncome(p.income + c.ownInc) + contestBonus(c) - (c.totalLen - c.ownInc) * 0.5;
+    pool.sort((a, b) => netScore(b) - netScore(a) || a.totalLen - b.totalLen);
+    const best = pool[0];
+    if (netIncome(p.income + best.ownInc) <= netIncome(p.income)) {
+      if (p.engine < 6 && !p.engineUpgraded) {
+        p.engine++; p.engineUpgraded = true;
+        log(p.tname + " は収入逓減の境界を避け、配送せず機関車をアップグレード（→" + p.engine + "）。");
+      } else {
+        log(p.tname + " は収入逓減の境界を避けて輸送をパス。");
+      }
+      return;
+    }
+    executeDelivery(p.side, best);
+    return;
+  }
+
+  pool.sort((a, b) => moveScore(b) - moveScore(a) || a.totalLen - b.totalLen);
+  executeDelivery(p.side, pool[0]);
+}
+
+/* 収入逓減後の手取り（11/21/31/41/50を境に余計に下がる） */
+function netIncome(inc) {
+  let red = 0;
+  if (inc > 49) red = 10; else if (inc >= 41) red = 8; else if (inc >= 31) red = 6;
+  else if (inc >= 21) red = 4; else if (inc >= 11) red = 2;
+  return inc - red;
+}
+
+/* 指定sideが現エンジンで「自分の収入になる形で運べる」荷物キー（源都市:gi）の集合 */
+function deliverableCubeKeys(side, engine) {
+  const keys = new Set();
+  deliveriesFrom(side, engine).forEach(c => {
+    if (c.ownInc > 0) keys.add(c.srcName + ":" + c.gi);
+  });
+  return keys;
+}
+
+
+/* ---------- Goods Growth ---------- */
+function goodsGrowth() {
+  const prodSide = G.actions["Production"];
+  if(prodSide) {
+    for(let i=0;i<2;i++) {
+      if(!G.bag.length) break;
+      const cube = G.bag.pop();
+      let pool = allCities().filter(c=>c.color===cube);
+      if(!pool.length) pool = allCities();
+      let t=pool[0]; pool.forEach(c=>{if((c.goods||[]).length<(t.goods||[]).length)t=c;});
+      t.goods.push(cube);
+      log("生産: "+colorNameJa(cube)+" → "+t.name);
+    }
+  }
+  const diceWhite=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)];
+  const diceBlack=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)];
+  log("商品補充ダイス: 白="+diceWhite.join(",")+"　黒="+diceBlack.join(",")+"。");
+
+  function processOneDie(d, side) {
+    const stack = G.display[side][d];
+    const sideLabel = side==="white"?"白":"黒";
+    let normalTop=-1;
+    for(let i=2;i>=0;i--) { if(stack[i]!==undefined&&stack[i]!==null){normalTop=i;break;} }
+    if(normalTop>=0) {
+      const cube=stack[normalTop]; stack[normalTop]=null;
+      const cityNames=(DISPLAY_CITIES[d]||[]).filter(n=>LOCS[n]&&LOCS[n].t==="city");
+      if(cityNames.length) {
+        let target=cityNames[0]; cityNames.forEach(n=>{if((LOCS[n].goods||[]).length<(LOCS[target].goods||[]).length)target=n;});
+        LOCS[target].goods.push(cube);
+        log("  "+sideLabel+"ダイス"+d+": "+colorNameJa(cube)+" → "+target);
+      }
+    } else log("  "+sideLabel+"ダイス"+d+": キューブなし");
+    const ncId=DISPLAY_NEW_CITY[side][d];
+    if(ncId) {
+      const ncLoc=Object.values(LOCS).find(h=>h.isNew&&h.newCityId===ncId&&h.t==="city");
+      if(ncLoc) {
+        let newTop=-1;
+        for(let i=4;i>=3;i--) { if(stack[i]!==undefined&&stack[i]!==null){newTop=i;break;} }
+        if(newTop>=0) { const ncube=stack[newTop]; stack[newTop]=null; ncLoc.goods.push(ncube); log("  新都市"+ncId+"にも追加: "+colorNameJa(ncube)); }
+      }
+    }
+  }
+  diceWhite.forEach(d=>processOneDie(d,"white"));
+  diceBlack.forEach(d=>processOneDie(d,"black"));
+}
+
+/* ---------- VP・終了 ---------- */
+function tilesOwned(side) {
+  let n = 0;
+  Object.values(HEX).forEach(h => {
+    if (!h.tile) return;
+    const d = TILE_DEFS[h.tile.typeId];
+    if (h.t === "town") {
+      // 町は特殊計算：町から出た線路（出口）の本数ぶんVPになる。
+      // 例）2出口で都市間を貫通 → 町タイル自体で2点（land2枚＋町＝3枚でも線路VPは4点）。
+      if (h.tile.pairOwners && d && d.pairs) {
+        getPairs(h.tile.typeId, h.tile.rotation).forEach((pair, i) => {
+          if ((h.tile.pairOwners[i] || h.tile.owner) === side) n += pair.length;
+        });
+      } else if (h.tile.owner === side) {
+        n += getExits(h.tile.typeId, h.tile.rotation).length;
+      }
+    } else if (d && d.pairs) {
+      // 交差・共存タイルはペアごとにオーナーを確認
+      if (h.tile.pairOwners) {
+        getPairs(h.tile.typeId, h.tile.rotation).forEach((_, i) => {
+          if ((h.tile.pairOwners[i] || h.tile.owner) === side) n += 1;
+        });
+      } else if (h.tile.owner === side) {
+        // 通常タイル：pairs の本数ぶんカウント（直線・カーブは1本）
+        n += d.pairs.length;
+      }
+    }
+  });
+  return n;
+}
+function vp(side) {
+  const p=P(side);
+  const inc=p.income*3, sh=p.shares*3, trk=tilesOwned(side), cashvp=Math.floor(p.cash/20);
+  return {total:inc-sh+trk+cashvp,inc,sh,trk,cashvp};
+}
+function endGame(reason, winnerSide) {
+  G.over=true;
+  if(reason==="insolvency") {
+    G.winner=winnerSide; log("ゲーム終了 — 相手が破産。"+P(winnerSide).tname+" の勝利！");
+  } else {
+    const w=vp("white"),b=vp("black");
+    G.winner=w.total>=b.total?"white":"black";
+    log("最終結果 — White VP "+w.total+" | Black VP "+b.total+"。"+P(G.winner).tname+" の勝利！");
+  }
+  if(typeof ui_render==="function") ui_render();
+  sendGameLog(reason); // プレイログをGoogleスプレッドシートへ送信（公開時の記録用）
+}
+
+// ===== プレイログ記録（Googleスプレッドシート送信）=====
+// ↓ Apps Script のウェブアプリURLをここに貼ると送信が有効になる（空なら何も送信しない＝安全）。
+const LOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbypN0flcKNvqPDPifNb6TcjYpxkGw8XfCPzarimS29ukExaj7lwkTvYDCH6KpkmxXFU2Q/exec";
+// Apps Script 側の SHARED_TOKEN と必ず同じ文字列にする（不一致の投稿は拒否される）。
+const LOG_TOKEN = "se2026_a7Kx9mQ2";
+function sendGameLog(reason) {
+  try {
+    if (!LOG_ENDPOINT) return;
+    if (localStorage.getItem("logConsent") !== "yes") return; // 同意した人のみ送信
+    const w = vp("white"), b = vp("black");
+    const humanSide = (G.players.white && G.players.white.isAI) ? "black" : "white";
+    const payload = {
+      token:    LOG_TOKEN,
+      ts:       new Date().toISOString(),
+      reason:   reason || "",
+      winner:   G.winner,
+      whiteVP:  w.total,
+      blackVP:  b.total,
+      turns:    G.turn,
+      humanSide,                                   // 人間がどちらの色か
+      humanWon: G.winner === humanSide,
+      log:      G.log.slice().reverse().join("\n") // 古い順に並べ直した全ログ
+    };
+    // no-cors＋既定のtext/plainでプリフライト無し。記録失敗してもゲームには影響させない。
+    fetch(LOG_ENDPOINT, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+  } catch (e) { /* 記録失敗は無視 */ }
+}
+let ui_mode=null;
+function ui_render() { if(typeof renderAll==="function") renderAll(); }
+</script>
+<script>"use strict";
+/* ===== UI layer — タイル配置システム ===== */
+const SVGNS = "http://www.w3.org/2000/svg";
+let sel = {
+  hexKey: null,          // 配置対象hex
+  typeId: null,          // 選択タイル種類
+  rotation: 0,           // 現在回転
+  validRots: [],         // 有効回転リスト
+  moveSrc: null,
+  moveCands: null,   // 複数ルート選択中の候補リスト
+  urbanizeTown: null, urbanizeColor: null,
+};
+let validSrc = new Set(), validDst = new Set();
+function el(id) { return document.getElementById(id); }
+function svgEl(tag, attrs) {
+  const e = document.createElementNS(SVGNS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+/* ---------- タイル描画ヘルパー ---------- */
+// hexの中心からedge方向へのベクトル（flat-top）
+const EDGE_ANGLES = [30, 90, 150, 210, 270, 330]; // 辺の中点方向（度）
+function edgeMidpoint(cx, cy, e, r) {
+  const a = EDGE_ANGLES[e] * Math.PI / 180;
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+}
+
+// タイルSVGを描画（pairsまたはexitsから線を引く）
+function drawTilePairs(svg, hex, pairs, color, width) {
+  const { x: cx, y: cy } = hexCenter(hex.c, hex.r);
+  const r = SIZE * 0.82;
+  pairs.forEach(([a, b]) => {
+    const mA = edgeMidpoint(cx, cy, a, r);
+    const mB = edgeMidpoint(cx, cy, b, r);
+    const path = svgEl("path", {
+      d: `M${mA.x.toFixed(1)},${mA.y.toFixed(1)} Q${cx},${cy} ${mB.x.toFixed(1)},${mB.y.toFixed(1)}`,
+      fill: "none", stroke: color, "stroke-width": width, "stroke-linecap": "round"
+    });
+    svg.appendChild(path);
+  });
+}
+
+function drawTileLines(svg, hex, typeId, rot, color, width) {
+  const { x: cx, y: cy } = hexCenter(hex.c, hex.r);
+  const d = TILE_DEFS[typeId]; if (!d) return;
+  const r = SIZE * 0.82;
+
+  if (d.isTown) {
+    // 町タイル: 中心から各辺の中点へ直線（元の太さ）
+    const exits = getExits(typeId, rot);
+    exits.forEach(e => {
+      const mid = edgeMidpoint(cx, cy, e, r);
+      svg.appendChild(svgEl("line", {
+        x1: cx.toFixed(1), y1: cy.toFixed(1),
+        x2: mid.x.toFixed(1), y2: mid.y.toFixed(1),
+        stroke: color, "stroke-width": width, "stroke-linecap": "round"
+      }));
+    });
+  } else {
+    // 通常タイル: 辺の中点同士を結ぶ
+    const pairs = getPairs(typeId, rot);
+    pairs.forEach(([a, b]) => {
+      const mA = edgeMidpoint(cx, cy, a, r);
+      const mB = edgeMidpoint(cx, cy, b, r);
+      // 曲線描画（quadratic bezier）
+      const qx = cx, qy = cy;
+      const path = svgEl("path", {
+        d: `M${mA.x.toFixed(1)},${mA.y.toFixed(1)} Q${qx},${qy} ${mB.x.toFixed(1)},${mB.y.toFixed(1)}`,
+        fill: "none", stroke: color, "stroke-width": width, "stroke-linecap": "round"
+      });
+      svg.appendChild(path);
+    });
+  }
+}
+
+/* ---------- renderBoard ---------- */
+function renderBoard() {
+  const svg = el("board");
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // 背景hex
+  Object.values(HEX).forEach(h => {
+    let fill = "#3f7d4e", stroke = "#2c5a39";
+    if (h.t === "water") { fill = "#2b6c8f"; stroke = "#1d4f6b"; }
+    else if (h.terrain === "mountain") { fill = "#5a6e4a"; stroke = "#3a4e2e"; }
+    // 配置選択中
+    if (ui_mode === "build" && sel.hexKey === h.key && h.t !== "city" && h.t !== "water") fill = "#6aaa6a";
+    svg.appendChild(svgEl("polygon", { points: hexCorners(h.c, h.r), fill, stroke, "stroke-width": 1 }));
+    if (h.terrain === "mountain") {
+      const c = hexCenter(h.c, h.r);
+      const mt = svgEl("text", { x: c.x, y: c.y+4, "text-anchor":"middle", "font-size":10, fill:"#8fa87a" });
+      mt.textContent = "▲"; svg.appendChild(mt);
+    }
+    // 平地・山にクリックエリア（build時）
+    if (ui_mode === "build" && h.t !== "water" && h.t !== "city") {
+      const hit = svgEl("polygon", { points: hexCorners(h.c, h.r), fill:"transparent", style:"cursor:crosshair" });
+      hit.addEventListener("click", () => onHexClick(h.key));
+      svg.appendChild(hit);
+    }
+  });
+
+  // ③ 今ターンの配送ルートを「荷物の色」で光らせる（線路の下に淡いハロー）。新しいルートほど濃く。
+  UI_FX.routes.forEach((rt, ri) => {
+    const col = CITY_COLORS[rt.color] || "#fff";
+    const op = 0.12 + 0.18 * ((ri + 1) / UI_FX.routes.length); // 古い0.12〜新しい0.30
+    rt.hexKeys.forEach(k => {
+      const h = HEX[k]; if (!h) return;
+      const c = hexCenter(h.c, h.r);
+      svg.appendChild(svgEl("circle", { cx: c.x.toFixed(1), cy: c.y.toFixed(1), r: (SIZE*0.62).toFixed(1), fill: col, opacity: op }));
+    });
+  });
+
+  // 配置済みタイルを描画（都市・町の背景を先に描いた後で線路を重ねるため
+  // 平地hexのタイルのみここで描画、町hexは後述）
+  Object.values(HEX).forEach(h => {
+    if (!h.tile || h.t === "town") return;
+    const d = TILE_DEFS[h.tile.typeId];
+    if (d && d.pairs && h.tile.pairOwners) {
+      // pairOwnersがある場合：接続ペアごとに色を変えて描画
+      const pairs = getPairs(h.tile.typeId, h.tile.rotation);
+      pairs.forEach((pair, i) => {
+        const owner = h.tile.pairOwners[i] || h.tile.owner;
+        const col = owner === "white" ? "#3f8efc" : "#e8743b";
+        // このpairだけを描画する一時的なタイル情報を作る
+        const singlePair = [pair];
+        drawTilePairs(svg, h, singlePair, "#1a1a1a", 7);
+        drawTilePairs(svg, h, singlePair, col, 4);
+      });
+    } else {
+      const ownerColor = h.tile.owner === "white" ? "#3f8efc" : "#e8743b";
+      drawTileLines(svg, h, h.tile.typeId, h.tile.rotation, "#1a1a1a", 7);
+      drawTileLines(svg, h, h.tile.typeId, h.tile.rotation, ownerColor, 4);
+    }
+  });
+
+  // プレビュー（平地・山のみ）
+  if (ui_mode === "build" && sel.hexKey && sel.typeId) {
+    const hex = HEX[sel.hexKey];
+    if (hex && hex.t !== "town") {
+      drawTileLines(svg, hex, sel.typeId, sel.rotation, "#ffd23f88", 8);
+      drawTileLines(svg, hex, sel.typeId, sel.rotation, "#ffd23f", 3);
+    }
+  }
+
+  // 都市・町（白丸・都市色を描画）
+  Object.values(LOCS).forEach(L => {
+    const c = hexCenter(L.c, L.r);
+    const isSrc = validSrc.has(L.name), isDst = validDst.has(L.name);
+    const isUrbanizeTarget = ui_mode === "urbanize" && sel.urbanizeTown === L.name;
+    const isUrbanizeCandidate = ui_mode === "urbanize" && L.t === "town" && !sel.urbanizeTown;
+    if (L.t === "city") {
+      svg.appendChild(svgEl("polygon", {
+        points: hexCorners(L.c, L.r),
+        fill: CITY_COLORS[L.color] || "#555",
+        stroke: "#111", "stroke-width": 1.5, opacity: .92
+      }));
+    } else {
+      // 町hex：背景＋街ディスク白丸を先に描画
+      svg.appendChild(svgEl("polygon", { points: hexCorners(L.c, L.r), fill:"#6f9b78", stroke:"#2c5a39", "stroke-width":1 }));
+      // 町hexのタイル線路（先に描画）。複線（pairOwners）は線ごとに所有者の色で描く。
+      if (L.tile) {
+        const d = TILE_DEFS[L.tile.typeId];
+        if (d && d.pairs && L.tile.pairOwners) {
+          getPairs(L.tile.typeId, L.tile.rotation).forEach((pair, i) => {
+            const owner = L.tile.pairOwners[i] || L.tile.owner;
+            const col = owner === "white" ? "#3f8efc" : "#e8743b";
+            drawTilePairs(svg, L, [pair], "#1a1a1a", 7);
+            drawTilePairs(svg, L, [pair], col, 4);
+          });
+        } else {
+          const ownerColor = L.tile.owner === "white" ? "#3f8efc" : "#e8743b";
+          drawTileLines(svg, L, L.tile.typeId, L.tile.rotation, "#1a1a1a", 7);
+          drawTileLines(svg, L, L.tile.typeId, L.tile.rotation, ownerColor, 4);
+        }
+      }
+      // 町hexのプレビュー（先に描画）
+      if (ui_mode === "build" && sel.hexKey === L.key && sel.typeId) {
+        drawTileLines(svg, L, sel.typeId, sel.rotation, "#ffd23f88", 8);
+        drawTileLines(svg, L, sel.typeId, sel.rotation, "#ffd23f", 4);
+      }
+      // 街ディスク（白丸）を線路の上に描画
+      svg.appendChild(svgEl("circle", {
+        cx: c.x, cy: c.y, r: SIZE * 0.4,
+        fill: isUrbanizeTarget ? "#ffd23f" : "#e8ede8",
+        stroke: isUrbanizeTarget ? "#ffa000" : "#555", "stroke-width": 1.5
+      }));
+    }
+    // 選択ハイライト
+    if (isSrc) svg.appendChild(svgEl("polygon", {points:hexCorners(L.c,L.r),fill:"none",stroke:"#ffd23f","stroke-width":3.5}));
+    if (isDst) svg.appendChild(svgEl("polygon", {points:hexCorners(L.c,L.r),fill:"none",stroke:"#19d3a2","stroke-width":3.5,"stroke-dasharray":"5 3"}));
+    if (isUrbanizeCandidate) svg.appendChild(svgEl("polygon", {points:hexCorners(L.c,L.r),fill:"none",stroke:"#ffa040","stroke-width":2.5,"stroke-dasharray":"4 3"}));
+
+    // 新都市IDのみ上部に表示（既存都市名は非表示）
+    if (L.t === "city" && L.isNew) {
+      const label = svgEl("text", {x:c.x, y:c.y-SIZE*.28, "text-anchor":"middle", "font-size":18,
+        fill: L.color==="black"?"#ddd":"#fff", "font-weight":800});
+      label.textContent = L.newCityId||"";
+      svg.appendChild(label);
+    }
+
+    // 番号バッジ（1.5倍サイズ、上寄りに配置）
+    if (L.t === "city" && L.nums && L.nums.length) {
+      const bw = 17, bh = 17, fs = 12, gap = 19;
+      const totalW = L.nums.length * gap;
+      const startX = c.x - totalW / 2 + gap/2;
+      L.nums.forEach((n, i) => {
+        const bx = startX + i*gap, by = c.y - SIZE*.18;
+        svg.appendChild(svgEl("rect", {x:bx-bw/2, y:by-bh/2, width:bw, height:bh,
+          fill:L.numColors&&L.numColors[i]==="white"?"#fff":"#111", rx:3, stroke:"#888","stroke-width":.5}));
+        const nt = svgEl("text", {x:bx, y:by+fs*.38, "text-anchor":"middle", "font-size":fs,
+          fill:L.numColors&&L.numColors[i]==="white"?"#111":"#fff", "font-weight":700});
+        nt.textContent = n; svg.appendChild(nt);
+      });
+    }
+
+    // 商品キューブ（中央揃え）
+    const goods = L.goods||[];
+    if (goods.length) {
+      const sz=11, gap=12;
+      const perRow = Math.min(goods.length, 4);
+      const totalW = perRow * gap;
+      goods.forEach((g, i) => {
+        const col=i%4, row=Math.floor(i/4);
+        const gx = c.x - totalW/2 + col*gap + 0.5;
+        const gy = c.y + SIZE*0.28 + row*gap;
+        svg.appendChild(svgEl("rect", {x:gx,y:gy,width:sz,height:sz,fill:CITY_COLORS[g]||"#555",stroke:g==="black"?"#fff":"#000","stroke-width":g==="black"?1.2:.8,rx:2}));
+      });
+    }
+
+    // クリックエリア
+    const hit = svgEl("polygon", {points:hexCorners(L.c,L.r),fill:"transparent",style:"cursor:pointer"});
+    hit.addEventListener("click", () => onLocClick(L.name));
+    svg.appendChild(hit);
+  });
+
+  // ② 相手(CPU)の直近の敷設・都市化を赤い点滅枠でハイライト（クリックエリアの上＝最前面）
+  const glowKeys = new Set([...UI_FX.oppTiles]);
+  UI_FX.oppUrb.forEach(name => { if (LOCS[name]) glowKeys.add(LOCS[name].key); });
+  glowKeys.forEach(k => {
+    const h = HEX[k]; if (!h) return;
+    const poly = svgEl("polygon", { points: hexCorners(h.c, h.r), fill:"none", stroke:"#ff4d4d", "stroke-width":3.5 });
+    poly.setAttribute("class", "fx-glow");
+    poly.style.pointerEvents = "none";
+    svg.appendChild(poly);
+  });
+}
+
+function niceName(n) {
+  const map = {NewBedford:"New Bedford",NewHaven:"New Haven",NewYork:"New York",Albany:"Albany*"};
+  return map[n]||n;
+}
+
+/* ---------- renderPanels ---------- */
+function renderPanels() {
+  const phaseMap = {
+    issue:"株式発行", actions:"アクション選択",
+    build:"線路敷設（"+(G.players[G.order?.[G.idx]]?.tname||"")+"）",
+    move:"商品輸送（"+G.moveRound+"/3回目）",
+    income:"清算処理"
+  };
+  // 今ターンに取られたアクションをチップで表示
+  let actBar = "";
+  const acts = Object.entries(G.actions || {});
+  if (acts.length) {
+    actBar = '<div class="actbar">' + acts.map(([name, side]) => {
+      const pp = P(side);
+      return '<span class="actchip" style="background:'+pp.token+'">'+actionNameJa(name)+'<span class="who">'+pp.tname+'</span></span>';
+    }).join("") + '</div>';
+  }
+  // 今ターンの配送ルートの凡例（荷物色→区間）
+  let legend = "";
+  if (UI_FX.routes.length) {
+    legend = '<div class="fxlegend">輸送：' + UI_FX.routes.map(rt =>
+      '<span class="rt" title="'+P(rt.side).tname+'"><span class="sw" style="background:'+(CITY_COLORS[rt.color]||"#fff")+'"></span>'+rt.label+'</span>'
+    ).join("") + '</div>';
+  }
+  el("banner").innerHTML = "<b>ターン "+G.turn+"/8</b> &nbsp;•&nbsp; "+(phaseMap[G.phase]||G.phase)+
+    (!G.over&&["build","move","issue","actions"].includes(ui_mode)
+      ? " &nbsp;•&nbsp; <span class='you'>あなたの番</span>" : "") + actBar + legend;
+  ["white","black"].forEach(side => {
+    const p=P(side), v=vp(side), me=p.id==="human";
+    const first=turnOrder()[0]===side;
+    const incUp = (p._incomeStart !== undefined && p.income > p._incomeStart) ? p.income - p._incomeStart : 0;
+    const card=el("card-"+side);
+    card.className="pcard"+(me?" mine":"");
+    card.innerHTML='<div class="phead"><span class="dot" style="background:'+p.token+'"></span>'+
+      '<b>'+p.tname+'</b>'+
+      (first?'<span class="firsttag">先手</span>':'')+
+      '</div><div class="stats">'+
+      '<div>💵 $'+p.cash+'</div><div>📈 収入 <span class="inc">'+p.income+'</span>'+(incUp?' <span class="incup">+'+incUp+'</span>':'')+'</div>'+
+      '<div>🎫 株式 '+p.shares+'</div><div>🚂 機関車 '+p.engine+'</div>'+
+      '<div>🛤️ タイル '+tilesOwned(side)+'</div><div class="vp">🏆 VP '+v.total+'</div>'+
+      '</div>';
+  });
+  renderControls();
+}
+
+/* ---------- renderControls ---------- */
+function ctrlBtn(label,fn,cls) { return '<button class="'+(cls||'')+'" onclick="'+fn+'">'+label+'</button>'; }
+
+function renderControls() {
+  const c = el("controls");
+  if (G.over) {
+    c.innerHTML='<div class="winbox">'+P(G.winner).tname+'（'+P(G.winner).name+'）の勝利！</div>'+
+      vpBreak("white")+vpBreak("black")+
+      ctrlBtn("スタート画面に戻る","backToSetup()","primary");
+    return;
+  }
+
+  if (ui_mode === "issue") {
+    const p=human();
+    c.innerHTML='<p>株式を発行できます（1株 = $5入手）。<br>現在: '+p.shares+'株 / 所持金 $'+p.cash+'</p>'+
+      ctrlBtn("1株発行（+$5）","doIssue()",p.shares<15?"":"off")+
+      ctrlBtn("完了","humanIssueDone();afterHuman()","primary");
+
+  } else if (ui_mode === "actions") {
+    const ORDER = ["Locomotive","Urbanization","First Build","Engineer","First Move","Production"];
+    const avail = ORDER.filter(a => G.selectableActions.includes(a) && !G.actions[a]);
+    const b = avail.map(a =>
+      '<div>'+ctrlBtn(actionLabel(a)+actionHint(a),"doAction('"+a+"')")+'</div>'
+    ).join("");
+    c.innerHTML='<p>アクションを1つ選んでください（任意）：</p><div style="display:flex;flex-direction:column;gap:2px">'+b+'</div>';
+
+  } else if (ui_mode === "urbanize") {
+    const avail=availableNewCityTiles();
+    if (!sel.urbanizeTown) {
+      c.innerHTML='<p>🏙️ マップの<b>町をクリック</b>して都市化する場所を選んでください。</p>'+
+        ctrlBtn("都市化しない","humanUrbanizeDone();afterHuman()","ghost");
+    } else if (!sel.urbanizeColor) {
+      const tileBtns=avail.map(t=>{
+        const bg=CITY_COLORS[t.color]||"#555", fg=t.color==="yellow"?"#222":"#fff";
+        return ctrlBtn('<span style="background:'+bg+';color:'+fg+';border-radius:4px;padding:1px 6px;font-weight:700;margin-right:3px">'+t.id+'</span>'+t.label,
+          "doUrbanizeColor('"+t.id+"')");
+      }).join("");
+      c.innerHTML='<p>🏙️ 新都市タイルを選んでください：</p>'+
+        tileBtns+'<br>'+
+        ctrlBtn("← 戻る","sel.urbanizeTown=null;renderAll()","ghost")+
+        ctrlBtn("都市化しない","sel.urbanizeTown=null;humanUrbanizeDone();afterHuman()","ghost");
+    } else {
+      const tile=NEW_CITY_TILES.find(t=>t.id===sel.urbanizeColor);
+      const bg=tile?CITY_COLORS[tile.color]:"#555";
+      c.innerHTML='<p>🏙️ <span style="background:'+bg+';color:#fff;border-radius:4px;padding:1px 6px;font-weight:700">'+sel.urbanizeColor+'</span> として都市化します。</p>'+
+        ctrlBtn("✓ 確定","confirmUrbanize()","primary")+
+        ctrlBtn("← タイル選択に戻る","sel.urbanizeColor=null;renderAll()","ghost")+
+        ctrlBtn("都市化しない","sel.urbanizeTown=null;sel.urbanizeColor=null;humanUrbanizeDone();afterHuman()","ghost");
+    }
+
+  } else if (ui_mode === "build") {
+    renderBuildControls(c);
+
+  } else if (ui_mode === "move") {
+    renderMoveControls(c);
+
+  } else {
+    c.innerHTML='<p class="small">処理中…</p>';
+  }
+}
+
+/* ---------- 敷設コントロール ---------- */
+function renderBuildControls(c) {
+  const p = human();
+  const budget = buildBudget(p);
+  const remaining = budget - p.tilesThisTurn;
+  const placed = G_PLACEMENTS.filter(pl => {
+    const h = HEX[pl.hexKey];
+    return h && h.tile && h.tile.owner === p.side;
+  }).length;
+  const undoOne  = placed > 0 ? ctrlBtn("↩ 1手戻す","doUndoOne()","ghost") : ctrlBtn("↩ 1手戻す","doUndoOne()","off");
+  const undoAll  = placed > 0 ? ctrlBtn("✕ 全て取り消し","doUndoAll()","ghost") : ctrlBtn("✕ 全て取り消し","doUndoAll()","off");
+
+  if (!sel.hexKey) {
+    c.innerHTML='<p>① 線路を敷設したい<b>平地・山・町</b>のマスをクリックしてください。</p>'+
+      '<p class="small">残り敷設枚数: '+remaining+' / '+budget+
+      (placed>0 ? '　このターン配置済み: '+placed+'枚' : '')+
+      '　所持金: $'+p.cash+'</p>'+
+      '<div id="buildmsg" class="msg"></div>'+
+      undoOne+undoAll+
+      ctrlBtn("敷設完了","doHumanBuildDone()","primary");
+
+  } else if (!sel.typeId) {
+    const hex = HEX[sel.hexKey];
+    const prevTile = hex.tile;
+    c.innerHTML='<p>② <b>'+sel.hexKey+'</b> に置くタイルを選んでください：</p>'+
+      buildTileButtons(hex, prevTile)+
+      '<div id="buildmsg" class="msg"></div>'+
+      ctrlBtn("← hex選択に戻る","sel.hexKey=null;renderAll()","ghost")+
+      undoOne+undoAll+
+      ctrlBtn("敷設完了","doHumanBuildDone()","primary");
+
+  } else {
+    const hex = HEX[sel.hexKey];
+    const d = TILE_DEFS[sel.typeId];
+    const exits = getExits(sel.typeId, sel.rotation);
+    const cost = calcTileCost(sel.typeId, sel.rotation, hex, hex.tile);
+    const rotIdx = sel.validRots.indexOf(sel.rotation) + 1;
+    const rotTotal = sel.validRots.length;
+    const connNames = exits.map(e => {
+      const nb = edgeNeighborHex(hex, e);
+      if (nb && (nb.t === "city" || nb.t === "town")) return nb.name ? niceName(nb.name) : "町";
+      return null;
+    }).filter(Boolean);
+    c.innerHTML='<p>③ <b>'+d.label+'</b> の向きを選んでください。<br>'+
+      '<span class="small">接続辺: ['+exits.join(",")+']'+
+      (connNames.length ? '　→ <b>'+connNames.join('、')+'</b>に接続' : '')+
+      '　コスト: $'+cost+'</span></p>'+
+      '<div class="rot-btns">'+
+      ctrlBtn("↺ 左回転","rotateLeft()")+
+      '<span style="font-size:12px;color:var(--mut);margin:0 6px">'+rotIdx+'/'+rotTotal+'</span>'+
+      ctrlBtn("↻ 右回転","rotateRight()")+
+      '</div>'+
+      '<div id="buildmsg" class="msg"></div>'+
+      ctrlBtn("✓ この向きで確定","confirmPlacement()","primary")+
+      ctrlBtn("← タイル選択に戻る","sel.typeId=null;renderAll()","ghost")+
+      undoOne+undoAll+
+      ctrlBtn("敷設完了","doHumanBuildDone()","primary");
+  }
+}
+
+function buildTileButtons(hex, prevTile) {
+  const terrain = hex.terrain==="mountain"?"mountain":"plain";
+  let html = '';
+
+  if (hex.t === "town") {
+    // 町hex: Dedicated Townタイル + Simple/Complex+ディスク
+    html += '<div class="tile-group"><div class="tg-label">町専用タイル</div><div class="tile-row">';
+    Object.entries(TILE_DEFS).filter(([id,d])=>d.isTown).forEach(([id,d])=>{
+      if (d.stock <= 0) return;
+      html += tilePillBtn(id, d, prevTile);
+    });
+    html += '</div>';
+    if (!prevTile) {
+      html += '<div class="tile-group"><div class="tg-label">Simple＋町ディスク（残'+TOWN_DISK_STOCK+'個）</div><div class="tile-row">';
+      if (TOWN_DISK_STOCK > 0) {
+        Object.entries(TILE_DEFS).filter(([id,d])=>d.isSimple&&d.stock>0).forEach(([id,d])=>{
+          html += tilePillBtn(id, d, prevTile, true);
+        });
+      }
+      html += '</div>';
+      html += '<div class="tile-group"><div class="tg-label">Complex＋町ディスク（残'+TOWN_DISK_STOCK+'個）</div><div class="tile-row">';
+      if (TOWN_DISK_STOCK > 0) {
+        Object.entries(TILE_DEFS).filter(([id,d])=>(d.isCrossing||d.isCoexist)&&d.stock>0).forEach(([id,d])=>{
+          html += tilePillBtn(id, d, prevTile, true);
+        });
+      }
+      html += '</div>';
+    } else if (TILE_DEFS[prevTile.typeId] && TILE_DEFS[prevTile.typeId].isSimple) {
+      // 既存が Simple＋ディスクの町：Complex（複線交差・共存）へ置き換えて2本目の線路を通せる。
+      // 既存ディスクは引き継がれる（新規ディスク消費なし）。既存の出口は維持される。
+      html += '<div class="tile-group"><div class="tg-label">複線共存へ置き換え（$2・ディスク維持）</div><div class="tile-row">';
+      Object.entries(TILE_DEFS).filter(([id,d])=>d.isCoexist&&d.stock>0).forEach(([id,d])=>{
+        html += tilePillBtn(id, d, prevTile, true);
+      });
+      html += '</div>';
+      html += '<div class="tile-group"><div class="tg-label">複線交差へ置き換え（$3・ディスク維持）</div><div class="tile-row">';
+      Object.entries(TILE_DEFS).filter(([id,d])=>d.isCrossing&&d.stock>0).forEach(([id,d])=>{
+        html += tilePillBtn(id, d, prevTile, true);
+      });
+      html += '</div>';
+    }
+  } else if (!prevTile) {
+    // 新規敷設
+    html += '<div class="tile-group"><div class="tg-label">Simple（新規）</div><div class="tile-row">';
+    Object.entries(TILE_DEFS).filter(([id,d])=>d.isSimple&&d.stock>0).forEach(([id,d])=>{
+      html += tilePillBtn(id, d, prevTile);
+    });
+    html += '</div></div>';
+    html += '<div class="tile-group"><div class="tg-label">Complex Coexist（新規）</div><div class="tile-row">';
+    Object.entries(TILE_DEFS).filter(([id,d])=>d.isCoexist&&d.stock>0).forEach(([id,d])=>{
+      html += tilePillBtn(id, d, prevTile);
+    });
+    html += '</div></div>';
+    html += '<div class="tile-group"><div class="tg-label">Complex Crossing（新規）</div><div class="tile-row">';
+    Object.entries(TILE_DEFS).filter(([id,d])=>d.isCrossing&&d.stock>0).forEach(([id,d])=>{
+      html += tilePillBtn(id, d, prevTile);
+    });
+    html += '</div></div>';
+  } else {
+    const pd = TILE_DEFS[prevTile.typeId];
+    if (pd && pd.isSimple) {
+      // Simple→Complexへの置き換え
+      html += '<div class="tile-group"><div class="tg-label">Complex Coexistへ置き換え（$2）</div><div class="tile-row">';
+      Object.entries(TILE_DEFS).filter(([id,d])=>d.isCoexist&&d.stock>0).forEach(([id,d])=>{
+        html += tilePillBtn(id, d, prevTile);
+      });
+      html += '</div>';
+      html += '<div class="tile-group"><div class="tg-label">Complex Crossingへ置き換え（$3）</div><div class="tile-row">';
+      Object.entries(TILE_DEFS).filter(([id,d])=>d.isCrossing&&d.stock>0).forEach(([id,d])=>{
+        html += tilePillBtn(id, d, prevTile);
+      });
+      html += '</div></div>';
+    }
+  }
+  return html;
+}
+
+function tilePreviewSVG(typeId, rot) {
+  // 小さなhexプレビューSVG（50x50px）
+  const S = 20; // hex size
+  const cx = 25, cy = 25;
+  const SQ3 = Math.sqrt(3);
+  // hex corners (flat-top)
+  let pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i);
+    pts.push((cx + S * Math.cos(a)).toFixed(1) + ',' + (cy + S * Math.sin(a)).toFixed(1));
+  }
+  const hexPoly = '<polygon points="' + pts.join(' ') + '" fill="#3f7d4e" stroke="#2c5a39" stroke-width="1"/>';
+
+  const d = TILE_DEFS[typeId]; if (!d) return '';
+  const r = S * 0.82;
+
+  // 辺の中点
+  const EDGE_ANGLES = [30, 90, 150, 210, 270, 330];
+  function mid(e) {
+    const a = EDGE_ANGLES[e] * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  }
+
+  let lines = '';
+  const exits = d.isTown
+    ? rotateExits(d.exits, rot)
+    : [...new Set(rotatePairs(d.pairs, rot).flat())];
+  const pairs = d.isTown ? null : rotatePairs(d.pairs, rot);
+
+  if (d.isTown) {
+    // 町: 中心→辺の直線
+    exits.forEach(e => {
+      const m = mid(e);
+      lines += '<line x1="'+cx+'" y1="'+cy+'" x2="'+m.x.toFixed(1)+'" y2="'+m.y.toFixed(1)+'" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>';
+      lines += '<line x1="'+cx+'" y1="'+cy+'" x2="'+m.x.toFixed(1)+'" y2="'+m.y.toFixed(1)+'" stroke="#ccc" stroke-width="1.8" stroke-linecap="round"/>';
+    });
+    lines += '<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="#e8ede8" stroke="#555" stroke-width="1"/>';
+  } else {
+    // 通常タイル: 辺→辺のbezier
+    pairs.forEach(([a, b]) => {
+      const mA = mid(a), mB = mid(b);
+      lines += '<path d="M'+mA.x.toFixed(1)+','+mA.y.toFixed(1)+' Q'+cx+','+cy+' '+mB.x.toFixed(1)+','+mB.y.toFixed(1)+'" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>';
+      lines += '<path d="M'+mA.x.toFixed(1)+','+mA.y.toFixed(1)+' Q'+cx+','+cy+' '+mB.x.toFixed(1)+','+mB.y.toFixed(1)+'" fill="none" stroke="#ccc" stroke-width="1.8" stroke-linecap="round"/>';
+    });
+  }
+  return '<svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">' + hexPoly + lines + '</svg>';
+}
+
+function tilePillBtn(id, d, prevTile, withDisk) {
+  const stock = d.stock !== undefined ? '（残'+d.stock+'）' : '';
+  const diskLabel = withDisk ? '<br><span style="font-size:10px">＋町ディスク</span>' : '';
+  // デフォルト回転でプレビュー
+  const rot = validRotations(id)[0] || 0;
+  const preview = tilePreviewSVG(id, rot);
+  return '<button onclick="selectTile(\''+id+'\','+!!withDisk+')" class="tile-btn-visual">'+
+    preview +
+    '<span class="tile-btn-label">'+d.label+stock+diskLabel+'</span>'+
+    '</button>';
+}
+
+/* ---------- 回転コントロール ---------- */
+function rotateLeft() {
+  if (!sel.typeId || !sel.validRots.length) return;
+  const idx = sel.validRots.indexOf(sel.rotation);
+  sel.rotation = sel.validRots[(idx - 1 + sel.validRots.length) % sel.validRots.length];
+  renderAll();
+}
+function rotateRight() {
+  if (!sel.typeId || !sel.validRots.length) return;
+  const idx = sel.validRots.indexOf(sel.rotation);
+  sel.rotation = sel.validRots[(idx + 1) % sel.validRots.length];
+  renderAll();
+}
+
+/* ---------- 輸送コントロール ---------- */
+function renderMoveControls(c) {
+  const p = human();
+  const cands = deliveriesFrom(p.side, p.engine);
+  // ルート選択中
+  if (sel.moveCands) {
+    const opp = p.side === "white" ? "black" : "white";
+    let html = '<p><b>'+niceName(sel.moveSrc)+'→'+niceName(sel.moveCands[0].dest)+'</b>：ルートを選択してください。</p>';
+    html += '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px">';
+    sel.moveCands.forEach((cd, i) => {
+      const oppInc = cd.links.filter(l=>l.owner===opp).length;
+      const neutral = cd.links.filter(l=>!l.owner).length;
+      let desc = cd.totalLen+"リンク｜自分+"+cd.ownInc;
+      if (oppInc) desc += "・相手+"+oppInc;
+      if (neutral) desc += "・中立"+neutral;
+      html += '<button onclick="chooseRoute('+i+')" style="text-align:left">'+
+        'ルート'+(i+1)+'　<span style="color:var(--mut);font-size:11px">（'+desc+'）</span></button>';
+    });
+    html += '</div>';
+    html += ctrlBtn("戻る","sel.moveCands=null;sel.moveSrc=null;recomputeMove();renderAll()","ghost");
+    c.innerHTML = html;
+    return;
+  }
+  let hint;
+  if (sel.moveSrc) {
+    hint = "<b>"+niceName(sel.moveSrc)+"</b> から出発 — 輸送先（緑点線）をクリック。";
+  } else {
+    hint = cands.length ? "光っている都市をクリックして出発地を選んでください（"+G.moveRound+"/3回目）。"
+      : "輸送できる商品がありません。";
+  }
+  c.innerHTML='<p>'+hint+'</p>'+
+    '<div id="movemsg" class="msg"></div>'+
+    (sel.moveSrc?ctrlBtn("戻る","sel.moveSrc=null;sel.moveCands=null;recomputeMove();renderAll()","ghost"):"")+
+    ctrlBtn("機関車アップグレード（+1）— この輸送を消費","doBump()",(p.engine<6&&!p.engineUpgraded)?"":"off")+
+    ctrlBtn("この輸送をパス","doPassMove()","ghost");
+}
+function chooseRoute(i) {
+  const p = human();
+  const cd = sel.moveCands[i];
+  executeDelivery(p.side, cd);
+  sel.moveSrc=null; sel.moveCands=null; validSrc=new Set(); validDst=new Set();
+  humanMoveDone(); afterHuman();
+}
+
+/* ---------- イベントハンドラ ---------- */
+function onHexClick(hexKey) {
+  if (G.over || ui_mode !== "build") return;
+  const h = HEX[hexKey];
+  if (!h || h.t === "water" || h.t === "city") return;
+  sel.hexKey = hexKey;
+  sel.typeId = null;
+  sel.rotation = 0;
+  sel.validRots = [];
+  const m = el("buildmsg"); if (m) m.textContent = "";
+  renderAll();
+}
+
+function onLocClick(name) {
+  if (G.over) return;
+  if (ui_mode === "build") {
+    const h = LOCS[name];
+    if (h && h.t !== "city") onHexClick(h.key);
+  } else if (ui_mode === "move") {
+    if (!sel.moveSrc) {
+      if (validSrc.has(name)) { sel.moveSrc = name; recomputeMove(); renderAll(); }
+    } else {
+      if (validDst.has(name)) {
+        const p = human();
+        const cands = deliveriesFrom(p.side, p.engine).filter(x=>x.srcName===sel.moveSrc&&x.dest===name);
+        if (cands.length) {
+          cands.sort((a,b)=>b.ownInc-a.ownInc||a.totalLen-b.totalLen);
+          const THRESHOLDS = new Set([11,21,31,41,50]);
+          const bestIncome = p.income + cands[0].ownInc;
+          // 後手かつ相手が輸送フェーズを終えている場合のみ選択肢を提示
+          const opp2 = p.side === "white" ? "black" : "white";
+          const isSecond = G.order[1] === p.side;
+          const oppDoneMoving = isSecond && G.moveRound > 1; // 相手は既に1回以上輸送済み→輸送終了
+          const needChoice = cands.length > 1 && THRESHOLDS.has(bestIncome) && oppDoneMoving;
+          if (needChoice) {
+            sel.moveCands = cands; renderAll();
+          } else {
+            executeDelivery(p.side, cands[0]);
+            sel.moveSrc=null; sel.moveCands=null; validSrc=new Set(); validDst=new Set();
+            humanMoveDone(); afterHuman();
+          }
+          return;
+        }
+      } else if (validSrc.has(name)) { sel.moveSrc=name; sel.moveCands=null; recomputeMove(); renderAll(); }
+    }
+  } else if (ui_mode === "urbanize") {
+    const h = LOCS[name];
+    if (h && h.t === "town" && !sel.urbanizeColor) { sel.urbanizeTown=name; renderAll(); }
+  }
+}
+
+function selectTile(typeId, withDisk) {
+  sel.typeId = typeId;
+  sel.withDisk = withDisk;
+  const m = el("buildmsg"); if (m) m.textContent = "";
+
+  // hex固有の有効回転に絞り込む（盤外・海を避けるもの）
+  const hex = sel.hexKey ? HEX[sel.hexKey] : null;
+  if (hex) {
+    const allRots = validRotations(typeId);
+    sel.validRots = allRots.filter(rot => {
+      const exits = getExits(typeId, rot);
+      return exits.every(e => {
+        const nb = edgeNeighborHex(hex, e);
+        if (!nb) return false;        // 盤外NG
+        if (nb.t === "water") return false; // 海NG
+        return true;                  // 都市・町・平地はOK
+      });
+    });
+  } else {
+    sel.validRots = validRotations(typeId);
+  }
+
+  // 有効回転がなければメッセージ表示
+  if (!sel.validRots.length) {
+    if (m) m.textContent = "このhexに置けるこのタイルの向きがありません。";
+    sel.typeId = null;
+    renderAll();
+    return;
+  }
+  sel.rotation = sel.validRots[0];
+  renderAll();
+}
+
+function confirmPlacement() {
+  if (!sel.hexKey || !sel.typeId) return;
+  const r = placeTile(human().side, sel.hexKey, sel.typeId, sel.rotation);
+  if (r.ok) {
+    sel.hexKey = null; sel.typeId = null; sel.rotation = 0; sel.validRots = [];
+    renderAll();
+  } else {
+    const m = el("buildmsg"); if (m) m.textContent = r.msg;
+    renderAll();
+  }
+}
+
+function doHumanBuildDone() {
+  const errors = humanBuildDone();
+  sel.hexKey = null; sel.typeId = null; sel.rotation = 0; sel.validRots = [];
+  if (errors.length) {
+    // エラー時：取り消し済み、理由を表示してbuildモード継続
+    const m = el("buildmsg");
+    if (m) m.textContent = "⚠ " + errors.join(" / ") + "　→ このターンの敷設を全て取り消しました。";
+    // 都市化も取り消された場合は都市化UIを再表示
+    if (G.actions["Urbanization"] === human().side && !human().urbanizedThisTurn) {
+      ui_mode = "urbanize";
+    }
+  }
+  afterHuman();
+}
+
+function recomputeMove() {
+  validSrc = new Set(); validDst = new Set();
+  if (ui_mode !== "move") return;
+  const p = human();
+  const cands = deliveriesFrom(p.side, p.engine);
+  if (!sel.moveSrc) { cands.forEach(c=>validSrc.add(c.srcName)); }
+  else { cands.filter(c=>c.srcName===sel.moveSrc).forEach(c=>validDst.add(c.dest)); }
+}
+
+function doIssue() { issueShare(human()); renderAll(); }
+function doAction(a) { humanActionDone(a||null); afterHuman(); }
+function doUndoOne() {
+  sel.hexKey = null; sel.typeId = null; sel.rotation = 0; sel.validRots = [];
+  undoLastPlacement(human().side);
+  renderAll();
+}
+function doUndoAll() {
+  sel.hexKey = null; sel.typeId = null; sel.rotation = 0; sel.validRots = [];
+  undoAllPlacements(human().side);
+  // 都市化が取り消された場合、都市化UIを再表示
+  if (G.actions["Urbanization"] === human().side && !human().urbanizedThisTurn) {
+    ui_mode = "urbanize";
+  }
+  renderAll();
+}
+function doUrbanize(name) { sel.urbanizeTown=name; sel.urbanizeColor=null; renderAll(); }
+function doUrbanizeColor(col) { sel.urbanizeColor=col; renderAll(); }
+function confirmUrbanize() {
+  if (!sel.urbanizeTown||!sel.urbanizeColor) return;
+  const r=urbanizeTown(sel.urbanizeTown, sel.urbanizeColor);
+  if(r.ok){
+    // 都市化のsideを記録
+    if (G_URBANIZATIONS.length && G_URBANIZATIONS[G_URBANIZATIONS.length-1].side === null)
+      G_URBANIZATIONS[G_URBANIZATIONS.length-1].side = human().side;
+    sel.urbanizeTown=null; sel.urbanizeColor=null; humanUrbanizeDone(); afterHuman();
+  } else renderAll();
+}
+function doBump() {
+  const p = human();
+  if (p.engineUpgraded) {
+    const m = el("movemsg"); if (m) m.textContent = "機関車のアップグレードはこのターン既に使用しました。";
+    renderAll(); return;
+  }
+  if (p.engine < 6) { p.engine++; p.engineUpgraded = true; log(p.tname+" が機関車をアップグレード（→"+p.engine+"）。"); }
+  sel.moveSrc=null; sel.moveCands=null; validSrc=new Set(); validDst=new Set(); humanMoveDone(); afterHuman();
+}
+function doPassMove() {
+  log(human().tname+" が輸送をパスしました。");
+  sel.moveSrc=null; sel.moveCands=null; validSrc=new Set(); validDst=new Set(); humanMoveDone(); afterHuman();
+}
+function afterHuman() { if(ui_mode==="move") recomputeMove(); renderAll(); }
+
+function actionLabel(a) {
+  const m={
+    "First Move":"🏃 優先輸送","First Build":"🔨 優先敷設","Engineer":"👷 エンジニア",
+    "Locomotive":"🚂 機関車","Production":"📦 商品生産","Urbanization":"🏗️ 都市化"};
+  return m[a]||a;
+}
+function actionHint(a) {
+  const h={"First Move":" — 毎ラウンド最初に輸送","First Build":" — 最初に敷設",
+    "Engineer":" — 4タイル敷設可","Locomotive":" — 今すぐ機関車+1",
+    "Production":" — キューブ2個追加","Urbanization":" — 町を新都市に変換"};
+  return '<span class="hint">'+(h[a]||"")+'</span>';
+}
+function vpBreak(side) {
+  const v=vp(side),p=P(side);
+  return '<div class="vpb"><b>'+p.name+' '+p.tname+'</b>: VP '+v.total+
+    ' = 収入×3（'+v.inc+'）+ タイル（'+v.trk+'）+ $÷20（'+v.cashvp+'）− 株×3（'+v.sh+'）</div>';
+}
+
+/* ---------- Goods Display ---------- */
+function renderDisplay() {
+  const el2=el("goodsdisplay");
+  if(!el2||!G||!G.display) return;
+  const CUBE_BG={red:"#c0392b",blue:"#2471c2",purple:"#8e44ad",yellow:"#e2b93b",black:"#2c2c2c"};
+  const CUBE_FG={red:"#fff",blue:"#fff",purple:"#fff",yellow:"#222",black:"#ccc"};
+  const NC_MAP={white:{3:"A",4:"B",5:"C",6:"D"},black:{1:"E",2:"F",3:"G",4:"H"}};
+  const NC_COLOR_MAP = {};
+  NEW_CITY_TILES.forEach(t => { NC_COLOR_MAP[t.id] = CUBE_BG[t.color] || "#888"; });
+  const NC_FG_MAP = {};
+  NEW_CITY_TILES.forEach(t => { NC_FG_MAP[t.id] = CUBE_FG[t.color] || "#fff"; });
+  function cubeDiv(cube) {
+    if(cube!==undefined&&cube!==null)
+      return '<div class="disp-cube" style="background:'+(CUBE_BG[cube]||"#888")+';color:'+(CUBE_FG[cube]||"#fff")+'">'+colorNameJa(cube).charAt(0)+'</div>';
+    return '<div class="disp-cube empty"></div>';
+  }
+  function buildSide(side,label,bgClass) {
+    const disp=G.display[side]||{};
+    let html='<div class="disp-side '+bgClass+'"><div class="disp-title">'+label+'</div><div class="disp-cols">';
+    for(let n=1;n<=6;n++) {
+      const stack=disp[n]||[], ncId=NC_MAP[side][n];
+      const ncLoc=ncId?Object.values(LOCS).find(h=>h.isNew&&h.newCityId===ncId):null;
+      const ncPlaced=!!(ncLoc&&ncLoc.t==="city");
+      html+='<div class="disp-col"><div class="disp-num">'+n+'</div>';
+      html+=cubeDiv(stack[2])+cubeDiv(stack[1])+cubeDiv(stack[0]);
+      if(ncId){
+        const ncBg = NC_COLOR_MAP[ncId]||"#555", ncFg = NC_FG_MAP[ncId]||"#fff";
+        html+='<div class="disp-newcity-label'+(ncPlaced?" placed":"")+'" style="background:'+ncBg+';color:'+ncFg+';border-radius:4px;padding:0 3px;border:none;opacity:'+(ncPlaced?'1':'0.75')+'">'+(ncPlaced?'✓':'')+ncId+'</div>';
+        html+=cubeDiv(stack[4])+cubeDiv(stack[3]);
+      } else html+='<div class="disp-spacer"></div>';
+      html+='</div>';
+    }
+    return html+'</div></div>';
+  }
+  el2.innerHTML=buildSide("white","白ダイス","disp-white")+buildSide("black","黒ダイス","disp-black");
+}
+
+/* ---------- top-level ---------- */
+function renderIncomeTrack() {
+  const div = el("incometrack"); if (!div || !G) return;
+  div.classList.add("active");
+  // bands: [redText, start, end, bandBg, cellBg, numColor]
+  // 段階的に暗くなる背景色
+  const bands = [
+    ["±0",   1, 10, "#2a2e36", "#32383f", "#8a96a3"],
+    ["−2",  11, 20, "#2a2a2a", "#333030", "#9a9090"],
+    ["−4",  21, 30, "#2d2626", "#3a2e2e", "#a88888"],
+    ["−6",  31, 40, "#301e1e", "#3f2828", "#c07070"],
+    ["−8",  41, 49, "#341414", "#441e1e", "#d86060"],
+    ["−10", 50, 50, "#380a0a", "#4a1010", "#ff6b6b"],
+  ];
+  const wp = G.players.white.income;
+  const bp = G.players.black.income;
+
+  let html = '<div class="itrack-title">収入トラック</div>';
+  bands.forEach(([red, start, end, bandBg, cellBg, numCol]) => {
+    // バンド行：ラベル右端＋セル群を横並び
+    html += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">';
+    html += '<div style="display:flex;gap:1px;flex:1;background:'+bandBg+';border-radius:4px;padding:2px">';
+    if (start === 50) {
+      const wHere = wp >= 50, bHere = bp >= 50;
+      const border = (wHere||bHere)?'1px solid '+(wHere&&bHere?'#a060ff':wHere?'#3f8efc':'#e8743b'):'1px solid #0003';
+      html += '<div style="flex:1;height:18px;border-radius:3px;background:'+cellBg+';border:'+border+
+        ';display:flex;align-items:center;justify-content:center;gap:3px">'+
+        '<span style="font-size:9px;font-weight:800;color:'+numCol+'">50+</span>';
+      if (wHere) html += '<span style="width:5px;height:5px;border-radius:50%;background:#3f8efc;border:1px solid #000a;display:inline-block"></span>';
+      if (bHere) html += '<span style="width:5px;height:5px;border-radius:50%;background:#e8743b;border:1px solid #000a;display:inline-block"></span>';
+      html += '</div>';
+    } else {
+      for (let v = start; v <= end; v++) {
+        const wHere = wp === v, bHere = bp === v;
+        const border = (wHere||bHere)?'1px solid '+(wHere&&bHere?'#a060ff':wHere?'#3f8efc':'#e8743b'):'1px solid #0002';
+        const bg = wHere&&bHere?'#2a1a40':wHere?'#1a3560':bHere?'#3a1a08':cellBg;
+        html += '<div style="flex:1;height:18px;border-radius:3px;background:'+bg+';border:'+border+
+          ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;position:relative">'+
+          '<span style="font-size:8px;font-weight:700;color:'+numCol+';line-height:1">'+v+'</span>'+
+          '<div style="display:flex;gap:1px;min-height:5px">';
+        if (wHere) html += '<span style="width:4px;height:4px;border-radius:50%;background:#3f8efc;display:inline-block"></span>';
+        if (bHere) html += '<span style="width:4px;height:4px;border-radius:50%;background:#e8743b;display:inline-block"></span>';
+        html += '</div></div>';
+      }
+    }
+    html += '</div>';
+    // ラベルを右端に
+    html += '<div style="font-size:8px;color:'+numCol+';font-weight:700;white-space:nowrap;width:28px;text-align:right">'+red+'</div>';
+    html += '</div>';
+  });
+  html += '<div style="display:flex;gap:10px;margin-top:3px;font-size:10px;color:var(--mut)">';
+  html += '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3f8efc;vertical-align:middle;margin-right:3px"></span>'+G.players.white.tname+'（'+wp+'）</span>';
+  html += '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#e8743b;vertical-align:middle;margin-right:3px"></span>'+G.players.black.tname+'（'+bp+'）</span>';
+  html += '</div>';
+  div.innerHTML = html;
+}
+
+function renderStatusTrack() {
+  const div = el("statustrack"); if (!div || !G) return;
+  div.classList.add("active");
+  const wp = G.players.white, bp = G.players.black;
+
+  // ── 株式トラック (2–15) ──
+  let shareHtml = '<div class="strack-block"><div class="strack-title">株式トラック</div><div class="strack-row">';
+  for (let n = 2; n <= 15; n++) {
+    const hw = wp.shares === n, hb = bp.shares === n;
+    const cls = hw && hb ? "owned-both" : hw ? "owned-w" : hb ? "owned-b" : "";
+    shareHtml += '<div class="strack-cell' + (cls ? " " + cls : "") + '">' +
+      '<div class="strack-num">' + n + '</div>' +
+      '<div class="strack-dots">' +
+      (hw ? '<div class="strack-dot" style="background:' + wp.token + '"></div>' : '') +
+      (hb ? '<div class="strack-dot" style="background:' + bp.token + '"></div>' : '') +
+      '</div></div>';
+  }
+  shareHtml += '</div></div>';
+
+  // ── 機関車トラック (1–6) ──
+  let engHtml = '<div class="strack-block"><div class="strack-title">機関車トラック</div><div class="strack-row">';
+  for (let n = 1; n <= 6; n++) {
+    const hw = wp.engine === n, hb = bp.engine === n;
+    const cls = hw && hb ? "owned-both" : hw ? "owned-w" : hb ? "owned-b" : "";
+    engHtml += '<div class="strack-cell' + (cls ? " " + cls : "") + '" style="padding:4px 2px">' +
+      '<div class="strack-num">' + n + '</div>' +
+      '<div class="strack-dots">' +
+      (hw ? '<div class="strack-dot" style="background:' + wp.token + '"></div>' : '') +
+      (hb ? '<div class="strack-dot" style="background:' + bp.token + '"></div>' : '') +
+      '</div></div>';
+  }
+  engHtml += '</div></div>';
+
+  // ── アクショントラック ──
+  const ACTION_LIST = ["First Move","First Build","Engineer","Locomotive","Production","Urbanization"];
+  const ACTION_JA   = {"First Move":"優先輸送","First Build":"優先敷設","Engineer":"エンジニア",
+                        "Locomotive":"機関車","Production":"商品補充","Urbanization":"都市化"};
+  let actHtml = '<div class="strack-block"><div class="strack-title">アクション</div><div class="atrack-row">';
+  ACTION_LIST.forEach(a => {
+    const taker = G.actions[a];
+    const pp = taker ? P(taker) : null;
+    const cls = taker ? (taker === "white" ? "taken-w" : "taken-b") : "";
+    actHtml += '<div class="atrack-cell' + (cls ? " " + cls : "") + '">' +
+      '<div class="atrack-name">' + ACTION_JA[a] + '</div>' +
+      '<div class="atrack-who">' + (pp ? pp.tname : "—") + '</div>' +
+      '</div>';
+  });
+  actHtml += '</div></div>';
+
+  div.innerHTML = shareHtml + engHtml + actHtml;
+}
+
+function renderRoundTrack() {
+  const div = el("roundtrack"); if (!div || !G) return;
+  div.classList.add("active");
+  const human_side = human().side;
+  const opp_side = human_side === "white" ? "black" : "white";
+  const wp = G.players[human_side], bp = G.players[opp_side];
+  let html = '<div class="rtrack-title">ラウンドトラック</div><div class="rtrack-cells">';
+  for (let t = 1; t <= 8; t++) {
+    const first = firstSideForTurn(t);
+    const isHumanFirst = first === human_side;
+    const dotColor = isHumanFirst ? wp.token : bp.token;
+    const firstName = isHumanFirst ? "あなた先手" : "CPU先手";
+    const cls = "rtrack-cell" + (t === G.turn ? " current" : t < G.turn ? " done" : "");
+    html += '<div class="' + cls + '">' +
+      '<div class="rtrack-turn">' + t + '</div>' +
+      '<div class="rtrack-first" style="background:' + dotColor + ';' + (t === G.turn ? 'border-color:#fff6' : '') + '"></div>' +
+      '</div>';
+  }
+  html += '</div>';
+  // 凡例
+  html += '<div style="display:flex;gap:10px;margin-top:5px;font-size:10px;color:var(--mut)">' +
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + wp.token + ';vertical-align:middle;margin-right:3px"></span>あなた</span>' +
+    '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + bp.token + ';vertical-align:middle;margin-right:3px"></span>' + bp.tname + '</span>' +
+    '</div>';
+  div.innerHTML = html;
+}
+
+function renderAll() {
+  if(!G) return;
+  if(ui_mode==="move") recomputeMove(); else {validSrc=new Set();validDst=new Set();}
+  renderBoard(); renderPanels(); renderDisplay(); renderLog(); renderIncomeTrack(); renderRoundTrack(); renderStatusTrack();
+}
+function renderLog() {
+  const l=el("log"); if(!l||!G) return;
+  l.innerHTML=G.log.map(s=>"<div>"+s.replace(/</g,"&lt;")+"</div>").join("");
+}
+function startNew() {
+  const side=document.querySelector('input[name="side"]:checked');
+  const val = side ? side.value : "white";
+  // ランダム選択時は白/黒を50%で決定
+  const humanWhite = (val === "random") ? (Math.random() < 0.5) : (val !== "black");
+  ui_mode=null; sel={hexKey:null,typeId:null,rotation:0,validRots:[],moveSrc:null,urbanizeTown:null,urbanizeColor:null};
+  el("setup").style.display="none";
+  newGame(humanWhite); renderAll();
+}
+// ゲーム終了後にスタート画面へ戻る（新都市などの状態は次のゲーム開始時に完全リセットされる）
+function backToSetup() {
+  el("setup").style.display="block";
+  el("setup").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+window.addEventListener("DOMContentLoaded",()=>{el("setup").style.display="block";});
+
+// ===== ログ記録の同意ダイアログ =====
+function setLogConsent(v){ try{ localStorage.setItem("logConsent", v); }catch(e){} const o=document.getElementById("consentOverlay"); if(o) o.remove(); }
+function showConsentDialog(){
+  // 既に選択済み、または送信先未設定なら表示しない
+  let decided=null; try{ decided=localStorage.getItem("logConsent"); }catch(e){}
+  if(decided==="yes"||decided==="no") return;
+  if(typeof LOG_ENDPOINT==="undefined"||!LOG_ENDPOINT) return;
+  const ov=document.createElement("div");
+  ov.id="consentOverlay";
+  ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;";
+  ov.innerHTML=
+    '<div style="background:#fff;color:#222;max-width:420px;margin:16px;padding:24px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);line-height:1.6;">'
+    +'<h3 style="margin:0 0 12px;font-size:18px;">対局ログの記録について</h3>'
+    +'<p style="margin:0 0 8px;font-size:14px;">このゲームでは、CPU（AI）の改善のために<b>対局のログ（手の記録・勝敗・得点）</b>を記録します。'
+    +'氏名や個人を特定する情報は含みません。</p>'
+    +'<p style="margin:0 0 16px;font-size:13px;color:#666;">同意いただける場合のみ記録されます。後で変えるにはブラウザのデータを消去してください。</p>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;">'
+    +'<button id="consentNo" style="padding:8px 16px;border:1px solid #bbb;background:#f3f3f3;color:#333;border-radius:8px;cursor:pointer;font-size:14px;">記録しない</button>'
+    +'<button id="consentYes" style="padding:8px 16px;border:none;background:#2471c2;color:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;">同意して記録する</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  document.getElementById("consentYes").addEventListener("click",()=>setLogConsent("yes"));
+  document.getElementById("consentNo").addEventListener("click",()=>setLogConsent("no"));
+}
+window.addEventListener("DOMContentLoaded", showConsentDialog);
+</script>
+</body>
+</html>
