@@ -1331,6 +1331,13 @@ function executeDelivery(side, cand) {
 /* ---------- ゲーム状態 ---------- */
 const CITY_COLORS = { red:"#c0392b", blue:"#2471c2", purple:"#8e44ad", yellow:"#e2b93b", black:"#2c2c2c" };
 const CUBE_COLORS = ["red","blue","purple","yellow","black"];
+// 色覚補助の記号（案A 幾何記号）。荷物キューブと都市に、色とあわせて記号を表示する。
+// 黒は地が暗く塗り記号(■)が埋もれるため、線記号の ✕ にして視認性を上げる。
+const COLOR_SYMBOLS = { red:"●", blue:"◆", purple:"▲", yellow:"★", black:"✕" };
+// 記号の文字色：黄は地が明るいので濃色、他は白。
+const SYMBOL_FG = { red:"#fff", blue:"#fff", purple:"#fff", yellow:"#222", black:"#fff" };
+// 記号ごとの大きさ補正（●は他より小さく見えるので拡大）。未指定は等倍。
+const SYMBOL_SCALE = { red:1.35 };
 const CITY_LIST = Object.values(LOCS).filter(l => l.t === "city");
 let G = null;
 
@@ -1396,7 +1403,10 @@ function newGame(humanIsWhite) {
 function shuffle(a) { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]; } }
 // SIM_MODE：先読みロールアウト中はログ・UI・乱数演出を抑制し、ネストしたロールアウトを止める。
 let SIM_MODE = false;
-function log(s) { if (SIM_MODE) return; G.log.unshift(s); if(G.log.length>5000) G.log.pop(); if(typeof renderLog==="function") renderLog(); }
+// hideUI=true のログは画面では非表示にしつつ G.log には残す（＝スプレッドシート送信＝分析用には含める）。
+// 先頭にマーカー文字を付け、renderLog で除外・sendGameLog で除去する。
+const LOG_HIDE_MARK = "";
+function log(s, hideUI) { if (SIM_MODE) return; G.log.unshift(hideUI ? LOG_HIDE_MARK + s : s); if(G.log.length>5000) G.log.pop(); if(typeof renderLog==="function") renderLog(); }
 function firstSideForTurn(t) { return [1,3,6,8].includes(t) ? "white" : "black"; }
 function turnOrder() { const f=firstSideForTurn(G.turn); return f==="white"?["white","black"]:["black","white"]; }
 function P(side) { return G.players[side]; }
@@ -2067,7 +2077,7 @@ function aiSelectAction(p) {
     if (ur && (ur.ownGain > 0 || ur.denial >= 2)) {
       urbGain = ur.score; urbTown = ur.town; urbTile = ur.tile;
       if (ur.denial >= 2 && ur.ownGain <= 0)
-        log(P(p.side).tname + " は都市化で相手の配送を妨害（" + niceName(ur.town) + "、相手収入-" + ur.denial + "見込み）。");
+        log(P(p.side).tname + " は都市化で相手の配送を妨害（" + niceName(ur.town) + "、相手収入-" + ur.denial + "見込み）。", true);
     }
   }
   // 即収入増が無くても、網に隣接する素の町があれば都市化候補にする。
@@ -2139,12 +2149,13 @@ function aiSelectAction(p) {
   const opening = openingMonopolyUrbanize(p, avail);
 
   if (opening) {
+    // 独占小ループ定石を採用。狙う町・色を明かすとプレイヤーに先読みされるため、ここではログを出さない。
+    // （都市化アクションの選択自体は takeAction が「都市化を選択。」と通常どおり記録する）
     pick = "Urbanization";
-    log(P(p.side).tname + " は独占小ループ定石：Town_8_3 を" + (opening.tile === "E" ? "黄" : "紫") + "都市化（Boston-Providence と小ループ）。");
   } else if (firstBuildGain >= 2 && firstBuildGain >= locoRecurValue && firstBuildGain >= urbGain) {
     // 優先敷設：後手で相手と競合する区域に高価値リンクを先に引く。
     pick = "First Build";
-    log(P(p.side).tname + " は優先敷設で競合区域のリンクを先に確保（" + firstBuildTxt + "、+" + firstBuildGain + "見込み）。");
+    log(P(p.side).tname + " は優先敷設で競合区域のリンクを先に確保（" + firstBuildTxt + "、+" + firstBuildGain + "見込み）。", true);
   } else if (denyLoco) {
     // 機関車を奪って相手の強化を妨害（自分のengineが6なら純粋な妨害、6未満なら自分も強化しつつ妨害）。
     pick = "Locomotive";
@@ -2859,7 +2870,7 @@ function aiBuild(p) {
     const goalNote = cand.loop ? "（環状線" + (cand.gainNow > 0 ? "＋配送+" + cand.gainNow : "") + "見込み）"
                    : cand.bypass > 0 ? "（献上回避＋配送+" + cand.gainNow + "見込み）"
                    : cand.gainNow > 0 ? "（配送+" + cand.gainNow + "見込み）" : "（網拡張）";
-    log(p.tname + " の狙い: " + sName + " → " + dName + " を接続" + goalNote);
+    log(p.tname + " の狙い: " + sName + " → " + dName + " を接続" + goalNote, true);
     totalPlaced += placed;
     remaining -= placed;
     linksBuilt++;
@@ -3125,7 +3136,7 @@ function sendGameLog(reason) {
       turns:    G.turn,
       humanSide,                                   // 人間がどちらの色か
       humanWon: G.winner === humanSide,
-      log:      G.log.slice().reverse().join("\n") // 古い順に並べ直した全ログ
+      log:      G.log.slice().reverse().map(s=>s[0]===LOG_HIDE_MARK?s.slice(1):s).join("\n") // 古い順・マーカー除去した全ログ
     };
     // no-cors＋既定のtext/plainでプリフライト無し。記録失敗してもゲームには影響させない。
     fetch(LOG_ENDPOINT, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
@@ -3291,6 +3302,16 @@ function renderBoard() {
         fill: CITY_COLORS[L.color] || "#555",
         stroke: "#111", "stroke-width": 1.5, opacity: .92
       }));
+      // 色覚補助の記号（案A）。数字バッジ（上）・荷物（下）と重ならないよう、
+      // 六角形の最も広い左中央に置く。縁取りでどの地色でも読めるようにする。
+      if (COLOR_SYMBOLS[L.color]) {
+        // 数字バッジ（中心から約-14px）より上に置く。縁取りでどの地色でも読めるようにする。
+        const csym = svgEl("text", {x:c.x, y:c.y - SIZE*0.64 + 4, "text-anchor":"middle",
+          "font-size":13*(SYMBOL_SCALE[L.color]||1), fill:SYMBOL_FG[L.color]||"#fff", "font-weight":800, "pointer-events":"none",
+          stroke:"#000a", "stroke-width":0.9, "paint-order":"stroke"});
+        csym.textContent = COLOR_SYMBOLS[L.color];
+        svg.appendChild(csym);
+      }
     } else {
       // 町hex：背景＋街ディスク白丸を先に描画
       svg.appendChild(svgEl("polygon", { points: hexCorners(L.c, L.r), fill:"#6f9b78", stroke:"#2c5a39", "stroke-width":1 }));
@@ -3329,7 +3350,7 @@ function renderBoard() {
 
     // 新都市IDのみ上部に表示（既存都市名は非表示）
     if (L.t === "city" && L.isNew) {
-      const label = svgEl("text", {x:c.x, y:c.y-SIZE*.28, "text-anchor":"middle", "font-size":18,
+      const label = svgEl("text", {x:c.x, y:c.y-SIZE*.05, "text-anchor":"middle", "font-size":15,
         fill: L.color==="black"?"#ddd":"#fff", "font-weight":800});
       label.textContent = L.newCityId||"";
       svg.appendChild(label);
@@ -3361,6 +3382,14 @@ function renderBoard() {
         const gx = c.x - totalW/2 + col*gap + 0.5;
         const gy = c.y + SIZE*0.28 + row*gap;
         svg.appendChild(svgEl("rect", {x:gx,y:gy,width:sz,height:sz,fill:CITY_COLORS[g]||"#555",stroke:g==="black"?"#fff":"#000","stroke-width":g==="black"?1.2:.8,rx:2}));
+        // 色覚補助の記号（案A）をキューブ中央に重ねる
+        if (COLOR_SYMBOLS[g]) {
+          // 中央寄せ：text-anchor=middle ＋ ベースライン補正（dominant-baseline非依存で確実に中央）
+          const gt = svgEl("text", {x:gx+sz/2, y:gy+sz/2+sz*0.30, "text-anchor":"middle",
+            "font-size":8.5*(SYMBOL_SCALE[g]||1), fill:SYMBOL_FG[g]||"#fff", "font-weight":700, "pointer-events":"none"});
+          gt.textContent = COLOR_SYMBOLS[g];
+          svg.appendChild(gt);
+        }
       });
     }
 
@@ -3942,7 +3971,7 @@ function renderDisplay() {
   NEW_CITY_TILES.forEach(t => { NC_FG_MAP[t.id] = CUBE_FG[t.color] || "#fff"; });
   function cubeDiv(cube) {
     if(cube!==undefined&&cube!==null)
-      return '<div class="disp-cube" style="background:'+(CUBE_BG[cube]||"#888")+';color:'+(CUBE_FG[cube]||"#fff")+'">'+colorNameJa(cube).charAt(0)+'</div>';
+      return '<div class="disp-cube" style="background:'+(CUBE_BG[cube]||"#888")+';color:'+(CUBE_FG[cube]||"#fff")+';font-size:13px">'+(COLOR_SYMBOLS[cube]||colorNameJa(cube).charAt(0))+'</div>';
     return '<div class="disp-cube empty"></div>';
   }
   function buildSide(side,label,bgClass) {
@@ -4109,7 +4138,8 @@ function renderAll() {
 }
 function renderLog() {
   const l=el("log"); if(!l||!G) return;
-  l.innerHTML=G.log.map(s=>"<div>"+s.replace(/</g,"&lt;")+"</div>").join("");
+  // マーカー付き（CPUの狙い・戦略）は画面に出さない。データ（G.log）には残るので送信には含まれる。
+  l.innerHTML=G.log.filter(s=>s[0]!==LOG_HIDE_MARK).map(s=>"<div>"+s.replace(/</g,"&lt;")+"</div>").join("");
 }
 function startNew() {
   const side=document.querySelector('input[name="side"]:checked');
