@@ -3111,8 +3111,13 @@ function endGame(reason, winnerSide) {
     G.winner=winnerSide; log("ゲーム終了 — 相手が破産。"+P(winnerSide).tname+" の勝利！");
   } else {
     const w=vp("white"),b=vp("black");
-    G.winner=w.total>=b.total?"white":"black";
-    log("最終結果 — White VP "+w.total+" | Black VP "+b.total+"。"+P(G.winner).tname+" の勝利！");
+    if(w.total===b.total) {
+      G.winner="draw";
+      log("最終結果 — White VP "+w.total+" | Black VP "+b.total+"。引き分け！");
+    } else {
+      G.winner=w.total>b.total?"white":"black";
+      log("最終結果 — White VP "+w.total+" | Black VP "+b.total+"。"+P(G.winner).tname+" の勝利！");
+    }
   }
   if(typeof ui_render==="function") ui_render();
   sendGameLog(reason); // プレイログをGoogleスプレッドシートへ送信（公開時の記録用）
@@ -3470,7 +3475,7 @@ function ctrlBtn(label,fn,cls) { return '<button class="'+(cls||'')+'" onclick="
 function renderControls() {
   const c = el("controls");
   if (G.over) {
-    c.innerHTML='<div class="winbox">'+P(G.winner).tname+'（'+P(G.winner).name+'）の勝利！</div>'+
+    c.innerHTML='<div class="winbox">'+(G.winner==="draw"?'引き分け！':P(G.winner).tname+'（'+P(G.winner).name+'）の勝利！')+'</div>'+
       vpBreak("white")+vpBreak("black")+
       ctrlBtn("スタート画面に戻る","backToSetup()","primary");
     return;
