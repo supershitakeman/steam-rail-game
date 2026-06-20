@@ -2095,30 +2095,31 @@ function aiSelectAction(p) {
   // どちらも「自然手番で後手のとき」だけ価値がある（先手なら既に先に動けるので不要）。
   const naturalFirst = turnOrder()[0] === p.side;
   let firstMoveGain = 0, firstBuildGain = 0, firstBuildTxt = "";
-  if (!naturalFirst) {
-    // 優先輸送：相手も運べる荷物（競合キューブ）を、相手より先に確保できる益。
-    // 後手だと相手が先に奪うので、最も価値の高い競合キューブの自分収入を「失う恐れのある益」とみなす。
-    if (avail.includes("First Move")) {
-      const oppKeys = deliverableCubeKeys(opp, P(opp).engine);
-      deliveriesFrom(p.side, p.engine).forEach(c => {
-        if (c.ownInc > 0 && oppKeys.has(c.srcName + ":" + c.gi))
-          firstMoveGain = Math.max(firstMoveGain, c.ownInc);
-      });
-    }
-    // 優先敷設：相手ネットに隣接する“取り合い”区域に高価値リンクを先に引ける益。
-    // 相手と競合しない単独建設では先後の差が出ないので、相手ネット隣接時のみ計上する。
-    if (avail.includes("First Build")) {
-      const oppNet = myNetworkHexes(opp);
-      if (oppNet.size > 0) {
-        const cand = planBestLink(p, buildBudget(p), null);
-        if (cand && cand.gainNow > 0) {
-          const steps = cand.path.filter(s => { const h=HEX[s.key]; return h && (h.t==="land"||h.t==="town") && !h.tile; });
-          const contested = steps.some(s => {
-            for (let e = 0; e < 6; e++) { const nb = edgeNeighborHex(HEX[s.key], e); if (nb && oppNet.has(nb.key)) return true; }
-            return false;
-          });
-          if (contested) { firstBuildGain = cand.gainNow; firstBuildTxt = niceName(HEX[cand.dest]?.name || cand.dest); }
-        }
+  // 優先輸送：相手も運べる荷物（競合キューブ）を、相手より先に確保できる益。
+  // 後手だと相手が先に奪うので、最も価値の高い競合キューブの自分収入を「失う恐れのある益」とみなす。
+  // これは後手番のときだけ意味がある（先手番なら既に先に運べる）。
+  if (!naturalFirst && avail.includes("First Move")) {
+    const oppKeys = deliverableCubeKeys(opp, P(opp).engine);
+    deliveriesFrom(p.side, p.engine).forEach(c => {
+      if (c.ownInc > 0 && oppKeys.has(c.srcName + ":" + c.gi))
+        firstMoveGain = Math.max(firstMoveGain, c.ownInc);
+    });
+  }
+  // 優先敷設：相手ネットに隣接する“取り合い”区域に高価値リンクを先に引ける益。
+  // 相手と競合しない単独建設では先後の差が出ないので、相手ネット隣接時のみ計上する。
+  // 後手番はもちろん、先手番でも「相手が同ターンに妨害敷設しうる競合区域を、確実に先取りしたい」
+  // 局面では価値がある。ただし先手番は既に建設順が先なので、発動条件は下の選択で厳しくする。
+  if (avail.includes("First Build")) {
+    const oppNet = myNetworkHexes(opp);
+    if (oppNet.size > 0) {
+      const cand = planBestLink(p, buildBudget(p), null);
+      if (cand && cand.gainNow > 0) {
+        const steps = cand.path.filter(s => { const h=HEX[s.key]; return h && (h.t==="land"||h.t==="town") && !h.tile; });
+        const contested = steps.some(s => {
+          for (let e = 0; e < 6; e++) { const nb = edgeNeighborHex(HEX[s.key], e); if (nb && oppNet.has(nb.key)) return true; }
+          return false;
+        });
+        if (contested) { firstBuildGain = cand.gainNow; firstBuildTxt = niceName(HEX[cand.dest]?.name || cand.dest); }
       }
     }
   }
@@ -2142,7 +2143,7 @@ function aiSelectAction(p) {
   // アクション拒否（機関車）：自分が先手で相手より先にアクションを取れるとき、
   // 相手が機関車を取ると大きく伸びる(oppLocoGain≥3)のに自分には強い手が無いなら、
   // 機関車を奪って相手の強化を1ターン遅らせる（engine6で自分に無益でも妨害として取る）。
-  const denyLoco = naturalFirst && avail.includes("Locomotive") && oppLocoGain >= 3
+  const denyLoco = naturalFirst && avail.includes("Locomotive") && oppLocoGain >= 2
     && locoGain <= 1 && urbGain < 2 && firstMoveGain < 2 && firstBuildGain < 2;
 
   // 序盤の独占小ループ定石（Town_8_3 を都市化して Boston-Providence と小ループ）。最優先で評価。
@@ -2152,8 +2153,10 @@ function aiSelectAction(p) {
     // 独占小ループ定石を採用。狙う町・色を明かすとプレイヤーに先読みされるため、ここではログを出さない。
     // （都市化アクションの選択自体は takeAction が「都市化を選択。」と通常どおり記録する）
     pick = "Urbanization";
-  } else if (firstBuildGain >= 2 && firstBuildGain >= locoRecurValue && firstBuildGain >= urbGain) {
-    // 優先敷設：後手で相手と競合する区域に高価値リンクを先に引く。
+  } else if (firstBuildGain >= (naturalFirst ? 4 : 2) && firstBuildGain >= locoRecurValue && firstBuildGain >= urbGain) {
+    // 優先敷設：相手と競合する区域に高価値リンクを先に引く。
+    // 先手番は既に建設順が先なので、機関車・都市化を明確に上回る高価値(>=4)の競合リンクが
+    // あるときだけ取る（無駄取り防止）。後手番は従来どおり>=2で取る。
     pick = "First Build";
     log(P(p.side).tname + " は優先敷設で競合区域のリンクを先に確保（" + firstBuildTxt + "、+" + firstBuildGain + "見込み）。", true);
   } else if (denyLoco) {
@@ -2609,7 +2612,7 @@ function planBestLink(p, maxTiles, avoid, preferStart, outList) {
         }
         if (oppAdj >= 2) blockBonus += 1;
       });
-      blockBonus = Math.min(blockBonus * 2.0 * Math.min(turnsLeft, 6) / 6, 10);
+      blockBonus = Math.min(blockBonus * 3.0 * Math.min(turnsLeft, 6) / 6, 16);
 
       // 接続ボーナス：起点が既存の自前ネットワークに繋がる建設を優遇（連結バックボーン＝連鎖配送・環状線の土台）。
       // 網がある状態での“飛び地建設”は中程度に減点し、まず1本の背骨を伸ばし切らせる（バラバラ建設の抑制）。
