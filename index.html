@@ -1009,25 +1009,32 @@ function placeTile(side, hexKey, typeId, rot) {
     // Simple→Simpleへの置き換えは不可（別のタイル種別が必要）
     if (pd && pd.isSimple && d.isSimple)
       return { ok:false, msg:"Simple同士の置き換えはできません。" };
-    // Simple→Complexへの置き換え：既存の接続を維持しているか
+    // Simple→Complexへの置き換え：既存の接続を「ペア（1本の通し線）」単位で維持しているか。
+    // 出口の辺が残っていても、新タイルが別ペアに割り当て直すと元のルートが切れる。
+    // 例：既存カーブ(0-2)を、辺0・2は持つが (0-3)(2-5) と繋ぐタイルに置くと 0-2 の線は壊れる。
+    // よって「既存タイルの各ペア {a,b} が、新タイルにもそのままペアとして存在する」ことを要求する。
     if (pd && pd.isSimple && (d.isCrossing || d.isCoexist)) {
-      const oldExits = getExits(prevTile.typeId, prevTile.rotation);
-      const newPairs = getPairs(typeId, rot).flat();
-      for (const e of oldExits) {
-        if (!newPairs.includes(e))
-          return { ok:false, msg:"既存の線路（辺" + e + "）を維持できません。" };
+      const oldPairs = getPairs(prevTile.typeId, prevTile.rotation);
+      const newPairs = getPairs(typeId, rot);
+      const hasPair = (a, b) => newPairs.some(p => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a));
+      for (const [a, b] of oldPairs) {
+        if (!hasPair(a, b))
+          return { ok:false, msg:"既存の線路（辺" + a + "-" + b + "）のルートを壊す置き換えはできません。" };
       }
     }
     // Complexタイルへのさらなる変更は不可
     if (pd && (pd.isCrossing || pd.isCoexist))
       return { ok:false, msg:"複合タイルの置き換えはできません。" };
-    // 町タイルの置き換えチェック：既存出口を維持
-    if (pd && pd.isTown) {
+    // 町タイルの置き換えチェック：既存の線路（出口辺）を1つでも失う置き換えは不可。
+    // 置き換え前・後のどちらかが町タイルなら対象（町hex上の通常線路→町タイルの“アップグレード”も含む）。
+    // 町は全スポークが中央ノードで any-to-any に繋がるため、出口辺の集合さえ維持すれば
+    // 元のルートは壊れない（＝出入口が同じでも辺を1本でも減らす置き換えは弾く）。
+    if ((pd && pd.isTown) || d.isTown) {
       const oldExits = getExits(prevTile.typeId, prevTile.rotation);
       const newExits = getExits(typeId, rot);
       for (const e of oldExits) {
         if (!newExits.includes(e))
-          return { ok:false, msg:"既存の町の線路（辺" + e + "）を維持できません。" };
+          return { ok:false, msg:"既存の町の線路（辺" + e + "）を壊す置き換えはできません。" };
       }
     }
   }
