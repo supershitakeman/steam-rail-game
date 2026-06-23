@@ -35,8 +35,13 @@
   button{font:inherit;font-size:12.5px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin:3px 4px 3px 0;cursor:pointer;transition:.12s}
   button:hover{border-color:var(--acc);background:#2a3644}
   button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+  button.success{background:#19a86e;border-color:#19a86e;color:#fff;font-weight:700}
   button.ghost{background:transparent;color:var(--mut)}
   button.off{opacity:.4;pointer-events:none}
+  /* ログのプレイヤー別背景色 */
+  #log .log-white{background:#1a2e50;border-left:3px solid #3f8efc;padding-left:5px}
+  #log .log-black{background:#2e1a0e;border-left:3px solid #e8743b;padding-left:5px}
+  #log .log-system{border-left:3px solid #444;padding-left:5px}
   .hint{color:var(--mut);font-size:11px}
   .msg{color:var(--warn);font-size:12px;min-height:14px;margin:4px 0}
   .winbox{font-size:16px;font-weight:800;color:var(--good);margin-bottom:8px}
@@ -1529,7 +1534,13 @@ function phaseIssue() {
   }
   G.phase="actions"; G.idx=0; stepPhase();
 }
-function humanIssueDone() { G.idx++; if(G.idx<2) phaseIssue(); else { G.phase="actions"; G.idx=0; stepPhase(); } }
+function humanIssueDone() {
+  const p = human();
+  if (p.cash < 6 && p.shares < 15) {
+    if (!confirm("所持金が $" + p.cash + " しかありません。株式を発行せずに進みますか？\n（1株発行すると $5 入手できます）")) return;
+  }
+  G.idx++; if(G.idx<2) phaseIssue(); else { G.phase="actions"; G.idx=0; stepPhase(); }
+}
 
 function phaseActions() {
   while(G.idx < 2) {
@@ -3590,7 +3601,7 @@ function renderBuildControls(c) {
       ctrlBtn("↻ 右回転","rotateRight()")+
       '</div>'+
       '<div id="buildmsg" class="msg"></div>'+
-      ctrlBtn("✓ この向きで確定","confirmPlacement()","primary")+
+      ctrlBtn("✓ この向きで確定","confirmPlacement()","success")+
       ctrlBtn("← タイル選択に戻る","sel.typeId=null;renderAll()","ghost")+
       undoOne+undoAll+
       ctrlBtn("敷設完了","doHumanBuildDone()","primary");
@@ -3620,6 +3631,24 @@ function buildTileButtons(hex, prevTile) {
       html += '<div class="tile-group"><div class="tg-label">Complex＋町ディスク（残'+TOWN_DISK_STOCK+'個）</div><div class="tile-row">';
       if (TOWN_DISK_STOCK > 0) {
         Object.entries(TILE_DEFS).filter(([id,d])=>(d.isCrossing||d.isCoexist)&&d.stock>0).forEach(([id,d])=>{
+          html += tilePillBtn(id, d, prevTile, true);
+        });
+      }
+      html += '</div>';
+    } else if (TILE_DEFS[prevTile.typeId] && TILE_DEFS[prevTile.typeId].isTown) {
+      // 既存が専用町タイル（town1等）→ 単線路/複線へのアップグレード（新規ディスク消費）
+      html += '<div class="tile-group"><div class="tg-label">単線路へ置き換え（$3・ディスク1個消費）</div><div class="tile-row">';
+      if (TOWN_DISK_STOCK > 0) {
+        Object.entries(TILE_DEFS).filter(([id,d])=>d.isSimple&&d.stock>0).forEach(([id,d])=>{
+          html += tilePillBtn(id, d, prevTile, true);
+        });
+      } else {
+        html += '<span style="color:var(--warn);font-size:11px">町ディスクの在庫がありません</span>';
+      }
+      html += '</div>';
+      html += '<div class="tile-group"><div class="tg-label">複線共存へ置き換え（$3・ディスク1個消費）</div><div class="tile-row">';
+      if (TOWN_DISK_STOCK > 0) {
+        Object.entries(TILE_DEFS).filter(([id,d])=>d.isCoexist&&d.stock>0).forEach(([id,d])=>{
           html += tilePillBtn(id, d, prevTile, true);
         });
       }
@@ -3927,6 +3956,13 @@ function confirmPlacement() {
 }
 
 function doHumanBuildDone() {
+  const p = human();
+  const budget = buildBudget(p);
+  if (!p.tilesThisTurn && budget > 0) {
+    if (!confirm("線路を1枚も敷設していません。このまま完了しますか？")) return;
+  } else if (p.tilesThisTurn > 0 && p.tilesThisTurn < 3 && budget >= 3) {
+    if (!confirm("敷設枚数が " + p.tilesThisTurn + " 枚です（最大 " + budget + " 枚）。このまま完了しますか？")) return;
+  }
   const errors = humanBuildDone();
   sel.hexKey = null; sel.typeId = null; sel.rotation = 0; sel.validRots = [];
   if (errors.length) {
@@ -3988,7 +4024,12 @@ function doBump() {
   sel.moveSrc=null; sel.moveCands=null; validSrc=new Set(); validDst=new Set(); humanMoveDone(); afterHuman();
 }
 function doPassMove() {
-  log(human().tname+" が輸送をパスしました。");
+  const p = human();
+  const msg = (!p.engineUpgraded && p.engine < 6)
+    ? "機関車をアップグレードせずに輸送をパスします。よろしいですか？\n（アップグレードすると射程が " + p.engine + " → " + (p.engine+1) + " に伸びます）"
+    : "この輸送をパスします。よろしいですか？";
+  if (!confirm(msg)) return;
+  log(p.tname+" が輸送をパスしました。");
   sel.moveSrc=null; sel.moveCands=null; validSrc=new Set(); validDst=new Set(); humanMoveDone(); afterHuman();
 }
 function afterHuman() { if(ui_mode==="move") recomputeMove(); renderAll(); }
@@ -4192,7 +4233,15 @@ function renderAll() {
 function renderLog() {
   const l=el("log"); if(!l||!G) return;
   // マーカー付き（CPUの狙い・戦略）は画面に出さない。データ（G.log）には残るので送信には含まれる。
-  l.innerHTML=G.log.filter(s=>s[0]!==LOG_HIDE_MARK).map(s=>"<div>"+s.replace(/</g,"&lt;")+"</div>").join("");
+  const wName = G.players.white.tname;
+  const bName = G.players.black.tname;
+  l.innerHTML=G.log.filter(s=>s[0]!==LOG_HIDE_MARK).map(s=>{
+    const t = s.replace(/</g,"&lt;");
+    let cls = "log-system";
+    if (s.startsWith(wName)) cls = "log-white";
+    else if (s.startsWith(bName)) cls = "log-black";
+    return "<div class='"+cls+"'>"+t+"</div>";
+  }).join("");
 }
 function startNew() {
   const side=document.querySelector('input[name="side"]:checked');
