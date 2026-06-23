@@ -3813,6 +3813,29 @@ function onLocClick(name) {
   } else if (ui_mode === "move") {
     if (!sel.moveSrc) {
       if (validSrc.has(name)) { sel.moveSrc = name; recomputeMove(); renderAll(); }
+      else {
+        // 出発地として選べない理由を表示
+        const p = human();
+        const m = el("movemsg");
+        if (m) {
+          const loc = LOCS[name];
+          if (!loc || (loc.t !== "city" && loc.t !== "town")) {
+            m.textContent = "都市・町のみ出発地に選べます。";
+          } else {
+            const allCands = deliveriesFrom(p.side, p.engine);
+            const fromHere = allCands.filter(c => c.srcName === name);
+            if (fromHere.length === 0) {
+              const loc2 = LOCS[name];
+              const hasGoods = loc2 && loc2.goods && loc2.goods.length > 0;
+              if (!hasGoods) m.textContent = niceName(name) + " に輸送できる商品がありません。";
+              else m.textContent = niceName(name) + " から届く都市がありません（機関車射程：" + p.engine + "リンク）。";
+            } else {
+              m.textContent = niceName(name) + " はあなたの路線に接続されていません。";
+            }
+          }
+          renderAll();
+        }
+      }
     } else {
       if (validDst.has(name)) {
         const p = human();
@@ -3836,6 +3859,21 @@ function onLocClick(name) {
           return;
         }
       } else if (validSrc.has(name)) { sel.moveSrc=name; sel.moveCands=null; recomputeMove(); renderAll(); }
+      else {
+        // 届け先として選べない理由を表示
+        const p = human();
+        const m = el("movemsg");
+        if (m) {
+          const fromSrc = deliveriesFrom(p.side, p.engine).filter(c => c.srcName === sel.moveSrc);
+          const destNames = new Set(fromSrc.map(c => c.dest));
+          if (!destNames.has(name)) {
+            m.textContent = niceName(name) + " へは届けられません（機関車射程 " + p.engine + " リンク以内に経路なし）。";
+          } else {
+            m.textContent = niceName(name) + " へは輸送できません。";
+          }
+          renderAll();
+        }
+      }
     }
   } else if (ui_mode === "urbanize") {
     const h = LOCS[name];
