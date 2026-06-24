@@ -1326,7 +1326,7 @@ function executeDelivery(side, cand) {
     else if (conn.owner === opp) oppInc++;
     if (conn.owner) P(conn.owner).income += 1;
   });
-  log(P(side).tname + " が " + colorNameJa(cand.color) + " を " + cand.srcName + "→" + cand.dest +
+  log(P(side).tname + " が " + colorNameJa(cand.color) + " を " + cityDesc(cand.srcName) + "→" + cityDesc(cand.dest) +
       "（" + cand.totalLen + " リンク｜自分+" + selfInc + (oppInc > 0 ? "・相手に+" + oppInc + "献上" : "") + "）");
 
   // 演出用：このルートのhex（経由地＋線路）を記録して光らせる
@@ -3454,6 +3454,28 @@ function renderBoard() {
 function niceName(n) {
   const map = {NewBedford:"New Bedford",NewHaven:"New Haven",NewYork:"New York",Albany:"Albany*"};
   return map[n]||n;
+}
+// 都市を「赤都市（白5,6）」「赤都市（新都市A）」形式で説明する
+function cityDesc(locName) {
+  const loc = LOCS[locName];
+  if (!loc) return niceName(locName);
+  const colName = colorNameJa(loc.color || "");
+  if (loc.isNew) return colName + "都市（新都市" + (loc.newCityId || "?") + "）";
+  if (loc.t === "city") {
+    const nums = loc.nums || [];
+    const numColors = loc.numColors || [];
+    // 同じバッジ色の数字をまとめてグループ化（例: 白5,6 / 黒3,4）
+    const groups = [];
+    nums.forEach((n, i) => {
+      const badge = numColors[i] === "white" ? "白" : "黒";
+      const last = groups[groups.length - 1];
+      if (last && last.badge === badge) { last.nums.push(n); }
+      else { groups.push({ badge, nums: [n] }); }
+    });
+    const numsStr = groups.map(g => g.badge + g.nums.join(",")).join("・");
+    return colName + "都市（" + numsStr + "）";
+  }
+  return niceName(locName);
 }
 
 /* ---------- renderPanels ---------- */
