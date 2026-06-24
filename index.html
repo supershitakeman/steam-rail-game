@@ -1336,7 +1336,7 @@ function executeDelivery(side, cand) {
     if (LOCS[conn.to]) routeHexes.add(LOCS[conn.to].key);
     (conn.hexPath || []).forEach(k => routeHexes.add(k));
   });
-  UI_FX.routes.push({ hexKeys: [...routeHexes], color: cand.color, side, label: niceName(cand.srcName) + "→" + niceName(cand.dest) });
+  UI_FX.routes.push({ hexKeys: [...routeHexes], links: cand.links, srcName: cand.srcName, destName: cand.dest, color: cand.color, side, label: niceName(cand.srcName) + "→" + niceName(cand.dest) });
   if (UI_FX.routes.length > 1) UI_FX.routes.shift();
 }
 
@@ -2070,7 +2070,7 @@ function openingMonopolyUrbanize(p, avail) {
 }
 
 function aiSelectAction(p) {
-  const avail = G.selectableActions.filter(a => !G.actions[a]);
+  const avail = G.selectableActions.filter(a => !G.actions[a] && !(a === "Production" && G.turn >= 8));
   const net = myNetworkHexes(p.side);
   const opp = p.side === "white" ? "black" : "white";
 
@@ -3273,14 +3273,28 @@ function renderBoard() {
     }
   });
 
-  // ③ 今ターンの配送ルートを「荷物の色」で光らせる（線路の下に淡いハロー）。新しいルートほど濃く。
+  // ③ 相手の配送ルートのみ：荷物の色でラインと都市ラベルを表示する。
   UI_FX.routes.forEach((rt, ri) => {
+    // 自分の配送は表示しない
+    if (rt.side === human().side) return;
     const col = CITY_COLORS[rt.color] || "#fff";
-    const op = 0.12 + 0.18 * ((ri + 1) / UI_FX.routes.length); // 古い0.12〜新しい0.30
+    const op = 0.12 + 0.18 * ((ri + 1) / UI_FX.routes.length);
+    // ③-b hex背景ハロー（荷物色・濃いめ）
     rt.hexKeys.forEach(k => {
       const h = HEX[k]; if (!h) return;
       const c = hexCenter(h.c, h.r);
-      svg.appendChild(svgEl("circle", { cx: c.x.toFixed(1), cy: c.y.toFixed(1), r: (SIZE*0.62).toFixed(1), fill: col, opacity: op }));
+      svg.appendChild(svgEl("circle", { cx: c.x.toFixed(1), cy: c.y.toFixed(1), r: (SIZE*0.62).toFixed(1), fill: col, opacity: "0.55" }));
+    });
+    // ③-c 出発都市・到着都市にラベルを表示
+    const srcLoc = LOCS[rt.srcName], dstLoc = LOCS[rt.destName];
+    [{ loc: srcLoc, mark: "▶" }, { loc: dstLoc, mark: "★" }].forEach(({ loc, mark }) => {
+      if (!loc) return;
+      const h = HEX[loc.key]; if (!h) return;
+      const c = hexCenter(h.c, h.r);
+      // 記号
+      svg.appendChild(svgEl("text", { x: c.x.toFixed(1), y: (c.y - SIZE*0.15).toFixed(1), "text-anchor": "middle", "font-size": (SIZE*0.38).toFixed(1), fill: col, stroke: "#000", "stroke-width": "2", "paint-order": "stroke", opacity: "0.95" }, mark));
+      // 都市名
+      svg.appendChild(svgEl("text", { x: c.x.toFixed(1), y: (c.y + SIZE*0.62).toFixed(1), "text-anchor": "middle", "font-size": (SIZE*0.28).toFixed(1), fill: "#fff", stroke: "#000", "stroke-width": "2.5", "paint-order": "stroke", "font-weight": "700", opacity: "0.95" }, niceName(loc.name)));
     });
   });
 
@@ -3507,7 +3521,7 @@ function renderControls() {
 
   } else if (ui_mode === "actions") {
     const ORDER = ["Locomotive","Urbanization","First Build","Engineer","First Move","Production"];
-    const avail = ORDER.filter(a => G.selectableActions.includes(a) && !G.actions[a]);
+    const avail = ORDER.filter(a => G.selectableActions.includes(a) && !G.actions[a] && !(a === "Production" && G.turn >= 8));
     const b = avail.map(a =>
       '<div>'+ctrlBtn(actionLabel(a)+actionHint(a),"doAction('"+a+"')")+'</div>'
     ).join("");
